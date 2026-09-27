@@ -1,0 +1,6 @@
+id=miui_tweaks
+name=miui tweaks
+version=v1.0.0
+versionCode=1
+author=min
+description=MIUI performance tweaks and Google Services optimizer, single config. Every tweak is off/safe by default
