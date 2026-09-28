@@ -3,4 +3,4 @@ name=miui tweaks
 version=v1.0.0
 versionCode=1
 author=min
-description=MIUI performance tweaks and Google Services optimizer, single config. Every tweak is off/safe by default
+description=MIUI performance tweaks, Google Services optimizer and Qualcomm Wi-Fi wakelock fix, single config. Every tweak is off/safe by default

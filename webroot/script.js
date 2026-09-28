@@ -19,7 +19,8 @@ const DEFAULTS = {
   DISABLE_BACKGROUND: "0", DISABLE_UPDATE: "0", DISABLE_LOCATION: "0", DISABLE_GEOFENCE: "0",
   DISABLE_NEARBY: "0", DISABLE_CAST: "0", DISABLE_DISCOVERY: "0", DISABLE_SYNC: "0",
   DISABLE_CLOUD: "0", DISABLE_AUTH: "0", DISABLE_WALLET: "0", DISABLE_PAYMENT: "0",
-  DISABLE_WEAR: "0", DISABLE_FITNESS: "0"
+  DISABLE_WEAR: "0", DISABLE_FITNESS: "0",
+  WIFI_QCOM_FIX: "0"
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -49,6 +50,9 @@ const GROUPS = [
     ["LMK_PROPS", "Disable Low Memory Killer logging", "ro.lmk.debug / log_stats false"],
     ["TOMBSTONE_DISABLE", "Stop saving crash tombstones", "Off by default - useful for diagnosing a crash if one happens"],
     ["BLUR_DISABLE", "Disable UI blur effects", "Launcher and SurfaceFlinger blur - cosmetic only"],
+  ]},
+  { title: "Wi-Fi (Qualcomm)", items: [
+    ["WIFI_QCOM_FIX", "Fix Wi-Fi wakelock drain", "Patches WCNSS_qcom_cfg.ini via overlay to cut qcom_rx_wakelock wakeups - Qualcomm only, needs reboot"],
   ]},
   { title: "GMS - Service categories", items: [
     ["DISABLE_ADS", "Advertising ID service", ""],
