@@ -422,6 +422,8 @@ tweak_wifi_qcom_fix() {
     wifi_set_key "$dst" gActiveMinChannelTime 20
     wifi_set_key "$dst" gMaxConcurrentActiveSessions 2
     chmod 644 "$dst"
+    chown --reference="$cfg" "$dst" 2>/dev/null
+    chcon --reference="$cfg" "$dst" 2>/dev/null || chcon u:object_r:vendor_configs_file:s0 "$dst" 2>/dev/null
     log 1 "wifi_qcom_fix: patched overlay for $cfg (reboot to take effect)"
   done
   is_on "$WIFI_QCOM_FIX" && [ "$found" = 0 ] && log 2 "wifi_qcom_fix: WCNSS_qcom_cfg.ini not found (non-Qualcomm device?)"
