@@ -30,6 +30,24 @@ is_on() {
   [ "$1" = "1" ]
 }
 
+PROP_TRACK="$MODDIR/config/.applied_props"
+
+set_prop() {
+  # $1=name $2=value - sets a non-persist prop and records its name so
+  # restore_all can delete it immediately on uninstall (no reboot needed).
+  resetprop -n "$1" "$2"
+  echo "$1" >> "$PROP_TRACK"
+}
+
+apply_prop_block() {
+  # $1 = multi-line "key value" list
+  echo "$1" | while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    resetprop $line
+    echo "${line%% *}" >> "$PROP_TRACK"
+  done
+}
+
 setup_resetprop() {
   if ! command -v resetprop > /dev/null 2>&1; then
     if [ -f /data/adb/ksu/bin/resetprop ]; then
@@ -189,7 +207,7 @@ log.redirect-stdio false
 libc.debug.malloc 0
 persist.vendor.ssr.enable_ramdumps 0"
 
-  echo "$props" | while IFS= read -r p; do resetprop $p; done
+  apply_prop_block "$props"
   log 1 "sys_log_props: applied"
 }
 
@@ -210,30 +228,30 @@ persist.sys.usap_pool_enabled true
 persist.device_config.runtime_native.usap_pool_enabled true"
   # JIT is deliberately left on.
 
-  echo "$props" | while IFS= read -r p; do resetprop $p; done
+  apply_prop_block "$props"
   log 1 "sys_dalvik_props: applied"
 }
 
 tweak_lmk_props() {
   is_on "$LMK_PROPS" || return 0
-  resetprop -n ro.lmk.debug false
-  resetprop -n ro.lmk.log_stats false
+  set_prop ro.lmk.debug false
+  set_prop ro.lmk.log_stats false
   log 1 "lmk_props: applied"
 }
 
 tweak_tombstone_disable() {
   is_on "$TOMBSTONE_DISABLE" || return 0
-  resetprop -n tombstoned.max_tombstone_count 0
+  set_prop tombstoned.max_tombstone_count 0
   log 1 "tombstone_disable: applied"
 }
 
 tweak_blur_disable() {
   is_on "$BLUR_DISABLE" || return 0
-  resetprop -n disableBlurs true
-  resetprop -n enable_blurs_on_windows 0
-  resetprop -n ro.launcher.blur.appLaunch 0
-  resetprop -n ro.sf.blurs_are_expensive 0
-  resetprop -n ro.surface_flinger.supports_background_blur 0
+  set_prop disableBlurs true
+  set_prop enable_blurs_on_windows 0
+  set_prop ro.launcher.blur.appLaunch 0
+  set_prop ro.sf.blurs_are_expensive 0
+  set_prop ro.surface_flinger.supports_background_blur 0
   log 1 "blur_disable: applied"
 }
 
@@ -467,6 +485,12 @@ restore_all() {
   load_conf
   restore_miui_services
   restore_gms_services
-  WIFI_QCOM_FIX=0; tweak_wifi_qcom_fix
-  log 1 "restore_all: services re-enabled (persist.* properties need reboot or manual resetprop -d to fully clear)"
+  if [ -f "$PROP_TRACK" ]; then
+    sort -u "$PROP_TRACK" | while IFS= read -r name; do
+      [ -n "$name" ] || continue
+      resetprop --delete "$name" 2>/dev/null || resetprop -d "$name" 2>/dev/null
+    done
+    rm -f "$PROP_TRACK"
+  fi
+  log 1 "restore_all: services re-enabled, tracked properties deleted (persist.* still need a reboot to fully clear since init reapplies them)"
 }
