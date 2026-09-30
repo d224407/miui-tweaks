@@ -174,6 +174,25 @@ body {
 }
 .switch.on .thumb { background: var(--md-on-primary); transform: translateX(20px); }
 
+.mini-select {
+  display: flex;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.mini-select button {
+  border: none;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.mini-select button + button { border-left: 1px solid var(--md-outline-variant); }
+.mini-select button.active { background: var(--md-primary); color: var(--md-on-primary); }
+
 .state-view { padding: 56px 24px; text-align: center; color: var(--md-on-surface-variant); }
 .state-view .title { font-size: 15px; font-weight: 500; margin-bottom: 4px; color: var(--md-on-surface); }
 .state-view .subtitle { font-size: 13px; }

@@ -20,7 +20,9 @@ const DEFAULTS = {
   DISABLE_NEARBY: "0", DISABLE_CAST: "0", DISABLE_DISCOVERY: "0", DISABLE_SYNC: "0",
   DISABLE_CLOUD: "0", DISABLE_AUTH: "0", DISABLE_WALLET: "0", DISABLE_PAYMENT: "0",
   DISABLE_WEAR: "0", DISABLE_FITNESS: "0",
-  WIFI_QCOM_FIX: "0"
+  WIFI_QCOM_FIX: "0",
+  WIFI_BAND_CAPABILITY: "0",
+  LEGACY_MODE: "0"
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -52,7 +54,11 @@ const GROUPS = [
     ["BLUR_DISABLE", "Disable UI blur effects", "Launcher and SurfaceFlinger blur - cosmetic only"],
   ]},
   { title: "Wi-Fi (Qualcomm)", items: [
-    ["WIFI_QCOM_FIX", "Fix Wi-Fi wakelock drain", "Patches WCNSS_qcom_cfg.ini via overlay to cut qcom_rx_wakelock wakeups - Qualcomm only, needs reboot"],
+    ["WIFI_QCOM_FIX", "Fix Wi-Fi wakelock drain", "Patches WCNSS_qcom_cfg.ini (ARP/NS offload, rx_wakelock_timeout, power save, roaming) - Qualcomm only, needs reboot"],
+    ["WIFI_BAND_CAPABILITY", "Force Wi-Fi band", "Locks the radio to one band instead of switching automatically. Only applies while the fix above is on.", false, "select"],
+  ]},
+  { title: "Legacy (deep tweak set)", items: [
+    ["LEGACY_MODE", "GhostGMS Legacy deep tweaks", "~78 extra sysprops (logging, BT codec, GPU composition, sleep mode) - broader and less tested than the tweaks above", true],
   ]},
   { title: "GMS - Service categories", items: [
     ["DISABLE_ADS", "Advertising ID service", ""],
@@ -119,12 +125,22 @@ function parseConf(text) {
 // Filtering + rendering
 //////////////////////////////////////////////////////////////////////////
 
+const SELECT_OPTIONS = {
+  WIFI_BAND_CAPABILITY: [
+    { value: "0", label: "Auto" },
+    { value: "1", label: "2.4GHz" },
+    { value: "2", label: "5GHz" },
+  ],
+};
+
 function allItems() {
-  return GROUPS.flatMap((g) => g.items.map((it) => ({ group: g.title, key: it[0], label: it[1], desc: it[2], risky: !!it[3] })));
+  return GROUPS.flatMap((g) => g.items.map((it) => ({
+    group: g.title, key: it[0], label: it[1], desc: it[2], risky: !!it[3], type: it[4] || "switch",
+  })));
 }
 
 function matchesTab(item) {
-  if (currentTab === "on") return state[item.key] === "1";
+  if (currentTab === "on") return item.type === "switch" && state[item.key] === "1";
   if (currentTab === "risky") return item.risky;
   return true;
 }
@@ -139,7 +155,8 @@ function render() {
   const root = document.getElementById("tweakList");
   const items = allItems().filter((it) => matchesTab(it) && matchesQuery(it));
 
-  document.getElementById("enabledCount").textContent = allItems().filter((it) => state[it.key] === "1").length;
+  document.getElementById("enabledCount").textContent =
+    allItems().filter((it) => it.type === "switch" && state[it.key] === "1").length;
 
   if (items.length === 0) {
     root.innerHTML = '<div class="state-view"><div class="title">No matching tweaks</div><div class="subtitle">Try a different filter or search term</div></div>';
@@ -153,16 +170,27 @@ function render() {
       html.push('<div class="group-title">' + it.group + "</div>");
       lastGroup = it.group;
     }
-    const on = state[it.key] === "1";
-    html.push(
-      '<div class="tweak-row" data-key="' + it.key + '">' +
-        '<div class="tweak-info">' +
-          '<span class="tweak-name">' + it.label + (it.risky ? '<span class="tweak-tag">risky</span>' : "") + "</span>" +
-          (it.desc ? '<div class="tweak-desc">' + it.desc + "</div>" : "") +
-        "</div>" +
-        '<div class="switch' + (on ? " on" : "") + '" data-key="' + it.key + '"><div class="thumb"></div></div>' +
-      "</div>"
-    );
+    const infoHtml =
+      '<div class="tweak-info">' +
+        '<span class="tweak-name">' + it.label + (it.risky ? '<span class="tweak-tag">risky</span>' : "") + "</span>" +
+        (it.desc ? '<div class="tweak-desc">' + it.desc + "</div>" : "") +
+      "</div>";
+
+    if (it.type === "select") {
+      const opts = SELECT_OPTIONS[it.key] || [];
+      const cur = state[it.key] || opts[0].value;
+      const btns = opts.map((o) =>
+        '<button class="' + (o.value === cur ? "active" : "") + '" data-key="' + it.key + '" data-value="' + o.value + '">' + o.label + "</button>"
+      ).join("");
+      html.push('<div class="tweak-row" data-key="' + it.key + '">' + infoHtml + '<div class="mini-select">' + btns + "</div></div>");
+    } else {
+      const on = state[it.key] === "1";
+      html.push(
+        '<div class="tweak-row" data-key="' + it.key + '">' + infoHtml +
+          '<div class="switch' + (on ? " on" : "") + '" data-key="' + it.key + '"><div class="thumb"></div></div>' +
+        "</div>"
+      );
+    }
   });
   root.innerHTML = html.join("");
 
@@ -171,6 +199,12 @@ function render() {
       const key = sw.getAttribute("data-key");
       const next = state[key] === "1" ? "0" : "1";
       setKey(key, next);
+    });
+  });
+
+  root.querySelectorAll(".mini-select button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setKey(btn.getAttribute("data-key"), btn.getAttribute("data-value"));
     });
   });
 }
@@ -203,9 +237,16 @@ async function loadState() {
 async function setKey(key, val) {
   state[key] = val;
   render();
-  const cmd = "sed -i 's/^" + key + "=.*/" + key + "=" + val + "/' " + CONF;
-  const r = await execCommand(cmd);
-  showSnackbar(r.errno === 0 ? key + " = " + val : "Failed to save " + key);
+  const saveCmd = "sed -i 's/^" + key + "=.*/" + key + "=" + val + "/' " + CONF;
+  const saved = await execCommand(saveCmd);
+  if (saved.errno !== 0) {
+    showSnackbar("Failed to save " + key);
+    return;
+  }
+  showSnackbar((val === "1" ? "Applying " : "Reverting ") + key + "...");
+  const runCmd = ". " + TWEAKS + " && run_single " + key + " " + val;
+  const r = await execCommand(runCmd);
+  showSnackbar(r.errno === 0 ? key + " " + (val === "1" ? "applied" : "reverted") : "Error: " + r.stderr);
 }
 
 async function applyNow() {
