@@ -5,8 +5,13 @@
 
 const MODDIR = "/data/adb/modules/miui_tweaks";
 const CONF = MODDIR + "/config/tweaks.conf";
-const TWEAKS = MODDIR + "/common/tweaks.sh";
+const LOAD = MODDIR + "/common/load.sh";
 const LOGFILE = "/storage/emulated/0/Android/miui_tweaks.log";
+
+// engine.sh derives everything from $MODDIR, which is only reliable when
+// set explicitly here - a `.`/source does not update $0, so the shell
+// running this command has no other way to know the module's path.
+const SOURCE_LOAD = "MODDIR='" + MODDIR + "'; . '" + LOAD + "'";
 
 // Must match config/tweaks.conf's shipped defaults.
 const DEFAULTS = {
@@ -16,6 +21,7 @@ const DEFAULTS = {
   PACKAGES_DEXOPT: "0", CMD_MISC: "1",
   LMK_PROPS: "1", TOMBSTONE_DISABLE: "0", BLUR_DISABLE: "0",
   DISABLE_ADS: "1", DISABLE_TRACKING: "1", DISABLE_ANALYTICS: "1", DISABLE_REPORTING: "1",
+  GMS_LOG_DISABLE: "1",
   DISABLE_BACKGROUND: "0", DISABLE_UPDATE: "0", DISABLE_LOCATION: "0", DISABLE_GEOFENCE: "0",
   DISABLE_NEARBY: "0", DISABLE_CAST: "0", DISABLE_DISCOVERY: "0", DISABLE_SYNC: "0",
   DISABLE_CLOUD: "0", DISABLE_AUTH: "0", DISABLE_WALLET: "0", DISABLE_PAYMENT: "0",
@@ -60,7 +66,8 @@ const GROUPS = [
   { title: "Legacy (deep tweak set)", items: [
     ["LEGACY_MODE", "GhostGMS Legacy deep tweaks", "~78 extra sysprops (logging, BT codec, GPU composition, sleep mode) - broader and less tested than the tweaks above", true],
   ]},
-  { title: "GMS - Service categories", items: [
+  { title: "GMS - Logging & service categories", items: [
+    ["GMS_LOG_DISABLE", "Disable GMS logging/telemetry", "clearcut, phenotype, analytics, usage-stats Settings.Global flags"],
     ["DISABLE_ADS", "Advertising ID service", ""],
     ["DISABLE_TRACKING", "Tracking components", ""],
     ["DISABLE_ANALYTICS", "Analytics / checkin", ""],
@@ -244,14 +251,14 @@ async function setKey(key, val) {
     return;
   }
   showSnackbar((val === "1" ? "Applying " : "Reverting ") + key + "...");
-  const runCmd = ". " + TWEAKS + " && run_single " + key + " " + val;
+  const runCmd = SOURCE_LOAD + " && run_single " + key + " " + val;
   const r = await execCommand(runCmd);
   showSnackbar(r.errno === 0 ? key + " " + (val === "1" ? "applied" : "reverted") : "Error: " + r.stderr);
 }
 
 async function applyNow() {
   showSnackbar("Applying...");
-  const cmd = ". " + TWEAKS + " && apply_early && apply_late";
+  const cmd = SOURCE_LOAD + " && apply_early && apply_late";
   const r = await execCommand(cmd);
   showSnackbar(r.errno === 0 ? "Applied" : "Error: " + r.stderr);
 }

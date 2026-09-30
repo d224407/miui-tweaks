@@ -3,5 +3,5 @@
 # MIUI Tweaks - early boot stage (properties only)
 ##############################################################################
 MODDIR="${0%/*}"
-. "$MODDIR/common/tweaks.sh"
+. "$MODDIR/common/load.sh"
 apply_early

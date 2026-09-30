@@ -4,7 +4,7 @@
 # Waits for boot_completed + first unlock before writing to /storage.
 ##############################################################################
 MODDIR="${0%/*}"
-. "$MODDIR/common/tweaks.sh"
+. "$MODDIR/common/load.sh"
 
 wait_until_login() {
   until [ "$(getprop sys.boot_completed)" -eq 1 ]; do sleep 1; done
