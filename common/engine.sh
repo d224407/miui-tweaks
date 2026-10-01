@@ -181,7 +181,8 @@ run_single() {
     LEGACY_MODE)          if is_on "$val"; then tweak_legacy_mode; else revert_props_tag LEGACY_MODE; fi ;;
     GMS_LOG_DISABLE)      if is_on "$val"; then tweak_gms_log_disable; else revert_gms_log_disable; fi ;;
     WIFI_QCOM_FIX)       tweak_wifi_qcom_fix; true ;;  # handles both on/off itself
-    WIFI_BAND_CAPABILITY) tweak_wifi_qcom_fix; true ;;  # re-patches with the new band value (no-op if WIFI_QCOM_FIX is off)
+    WIFI_BAND_CAPABILITY|WIFI_KEY_ARP|WIFI_KEY_NS|WIFI_KEY_MCADDR|WIFI_KEY_POWERSAVE|WIFI_KEY_RUNTIMEPM|WIFI_KEY_ROAM|WIFI_KEY_11D|WIFI_KEY_RTS|WIFI_KEY_SCANTIME|WIFI_KEY_SESSIONS|WIFI_KEY_WAKELOCK)
+      tweak_wifi_qcom_fix; true ;;  # re-patches with the current flags (no-op if WIFI_QCOM_FIX is off)
     *) log 2 "run_single: unknown key $key" ;;
   esac
   return 0

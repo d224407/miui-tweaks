@@ -13,7 +13,7 @@
 </div>
 
 <div class="content">
-  <div class="banner">Toggling a switch applies that tweak immediately. Press "Apply now" to re-run everything, or reboot the device.</div>
+  <div class="banner">Toggling a switch applies that tweak immediately. A group's master row bulk-enables everything below it if nothing is selected yet, or bulk-disables your current picks if some already are.</div>
 
   <div class="stat-card">
     <span class="label">Enabled</span>
@@ -31,12 +31,10 @@
     <button data-tab="risky">Risky</button>
   </div>
 
-  <div class="list-card">
-    <div class="list-scroll" id="tweakList">
-      <div class="state-view">
-        <div class="spinner"></div>
-        <div class="title">Loading</div>
-      </div>
+  <div class="scroll-area" id="tweakList">
+    <div class="state-view">
+      <div class="spinner"></div>
+      <div class="title">Loading</div>
     </div>
   </div>
 

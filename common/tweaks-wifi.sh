@@ -53,18 +53,20 @@ tweak_wifi_qcom_fix() {
     [ -f "/sbin/.magisk/mirror$cfg" ] && src="/sbin/.magisk/mirror$cfg"
     mkdir -p "$(dirname "$dst")"
     cp -f "$src" "$dst" || continue
-    wifi_set_key "$dst" hostArpOffload 0
-    wifi_set_key "$dst" hostNsOffload 0
-    wifi_set_key "$dst" gMCAddrListEnable 1
-    wifi_set_key "$dst" gEnablePowerSaveOffload 5
-    wifi_set_key "$dst" gRuntimePM 1
-    wifi_set_key "$dst" RoamRssiDiff 3
-    wifi_set_key "$dst" g11dSupportEnabled 0
-    wifi_set_key "$dst" RTSThreshold 1048576
-    wifi_set_key "$dst" gActiveMaxChannelTime 40
-    wifi_set_key "$dst" gActiveMinChannelTime 20
-    wifi_set_key "$dst" gMaxConcurrentActiveSessions 2
-    wifi_set_key "$dst" rx_wakelock_timeout 0
+    is_on "$WIFI_KEY_ARP" && wifi_set_key "$dst" hostArpOffload 0
+    is_on "$WIFI_KEY_NS" && wifi_set_key "$dst" hostNsOffload 0
+    is_on "$WIFI_KEY_MCADDR" && wifi_set_key "$dst" gMCAddrListEnable 1
+    is_on "$WIFI_KEY_POWERSAVE" && wifi_set_key "$dst" gEnablePowerSaveOffload 5
+    is_on "$WIFI_KEY_RUNTIMEPM" && wifi_set_key "$dst" gRuntimePM 1
+    is_on "$WIFI_KEY_ROAM" && wifi_set_key "$dst" RoamRssiDiff 3
+    is_on "$WIFI_KEY_11D" && wifi_set_key "$dst" g11dSupportEnabled 0
+    is_on "$WIFI_KEY_RTS" && wifi_set_key "$dst" RTSThreshold 1048576
+    if is_on "$WIFI_KEY_SCANTIME"; then
+      wifi_set_key "$dst" gActiveMaxChannelTime 40
+      wifi_set_key "$dst" gActiveMinChannelTime 20
+    fi
+    is_on "$WIFI_KEY_SESSIONS" && wifi_set_key "$dst" gMaxConcurrentActiveSessions 2
+    is_on "$WIFI_KEY_WAKELOCK" && wifi_set_key "$dst" rx_wakelock_timeout 0
     # WIFI_BAND_CAPABILITY: 0=leave as-is (auto, both bands), 1=2.4GHz
     # only, 2=5GHz only. Only written when explicitly set to 1 or 2.
     case "$WIFI_BAND_CAPABILITY" in
