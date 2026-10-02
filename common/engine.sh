@@ -1,9 +1,16 @@
 #!/system/bin/sh
 # MIUI Tweaks - engine
+# Tweak logic now lives in compiled C binaries under system/bin/ (src/*.c
+# in the repo) - this file just loads config, logs, and dispatches to the
+# right binary for the current ABI. Only cpu_pin stays here: it needs live
+# /proc process scanning tied to this shell's ps/awk-based helpers below.
 
 CONF="$MODDIR/config/tweaks.conf"
 LOGFILE="/storage/emulated/0/Android/miui_tweaks.log"
 GMSLIST="$MODDIR/gmslist.txt"
+PROP_TRACK="$MODDIR/config/.applied_props"
+
+. "$MODDIR/common/arch.sh"
 
 load_conf() {
   [ -f "$CONF" ] && . "$CONF"
@@ -20,53 +27,26 @@ log() {
 }
 
 is_on() {
-  # $1 = value of a config var, "1" = on
   [ "$1" = "1" ]
 }
 
-# Property tracking (set_prop/apply_prop_block/revert_props_tag) and the
-
-PROP_TRACK="$MODDIR/config/.applied_props"
-
-set_prop() {
-  # $1=tag(config key) $2=name $3=value - sets a non-persist prop and
-  # records "tag name" so it can be deleted immediately when that one
-  # tweak is turned off, or on uninstall.
-  resetprop -n "$2" "$3"
-  echo "$1 $2" >> "$PROP_TRACK"
-}
-
-apply_prop_block() {
-  # $1=tag(config key) $2 = multi-line "key value" list
-  echo "$2" | while IFS= read -r line; do
-    [ -n "$line" ] || continue
-    resetprop $line
-    echo "$1 ${line%% *}" >> "$PROP_TRACK"
+resetprop_bin() {
+  if command -v resetprop > /dev/null 2>&1; then echo "resetprop"; return; fi
+  for p in /data/adb/ksu/bin/resetprop /data/adb/ap/bin/resetprop; do
+    [ -f "$p" ] && { echo "$p"; return; }
   done
+  echo "setprop"
 }
 
-revert_props_tag() {
-  # $1 = tag(config key) - deletes every prop tracked under that tag and
-  # drops those lines from PROP_TRACK.
-  [ -f "$PROP_TRACK" ] || return 0
-  grep "^$1 " "$PROP_TRACK" | while IFS=' ' read -r _ name; do
-    [ -n "$name" ] && { resetprop --delete "$name" 2>/dev/null || resetprop -d "$name" 2>/dev/null; }
-  done
-  grep -v "^$1 " "$PROP_TRACK" > "$PROP_TRACK.tmp" 2>/dev/null
-  mv -f "$PROP_TRACK.tmp" "$PROP_TRACK" 2>/dev/null
-}
-
-setup_resetprop() {
-  if ! command -v resetprop > /dev/null 2>&1; then
-    if [ -f /data/adb/ksu/bin/resetprop ]; then
-      alias resetprop=/data/adb/ksu/bin/resetprop
-    elif [ -f /data/adb/ap/bin/resetprop ]; then
-      alias resetprop=/data/adb/ap/bin/resetprop
-    else
-      alias resetprop=setprop
-    fi
-    export resetprop
+run_tool() {
+  # $1 = tool name, rest = its argv (after conf+track, which we fill in)
+  local tool="$1"; shift
+  local p="$(bin_path "$tool")"
+  if [ -z "$p" ]; then
+    log 3 "engine: no $tool binary for this ABI (ro.product.cpu.abi=$(getprop ro.product.cpu.abi))"
+    return 1
   fi
+  "$p" "$CONF" "$PROP_TRACK" "$@"
 }
 
 terminate_service() {
@@ -74,9 +54,7 @@ terminate_service() {
   stop "$1" 2>/dev/null
 }
 
-# CPU / cgroup helpers
-
-# CPU / cgroup helpers
+# CPU / cgroup helpers (cpu_pin only - the rest moved into the C binaries)
 
 ps_ret=""
 rebuild_process_scan_cache() { ps_ret="$(ps -Ao pid,args)"; }
@@ -90,7 +68,6 @@ get_full_cpu_mask() {
 }
 
 change_task_cgroup() {
-  # $1 name-regex $2 cgroup $3 cpuset|stune
   for pid in $(echo "$ps_ret" | grep -i -E "$1" | awk '{print $1}'); do
     for tid in $(ls "/proc/$pid/task/" 2>/dev/null); do
       echo "$tid" > "/dev/$3/$2/tasks" 2>/dev/null
@@ -119,46 +96,69 @@ pin_proc_on_perf() {
   change_task_affinity "$1" "$(get_full_cpu_mask)"
 }
 
+tweak_cpu_pin() {
+  is_on "$CPU_PIN" || return 0
+  rebuild_process_scan_cache
+  for proc in zygote usap surfaceflinger system_server composer; do
+    pin_proc_on_perf "$proc"
+    change_task_cgroup "$proc" "foreground" "cpuset"
+    change_task_nice "$proc" "-20"
+  done
+  local top="$(pm resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME | grep packageName | head -n1 | cut -d= -f2) com.android.systemui"
+  for proc in $top; do
+    pin_proc_on_perf "$proc"
+    change_task_cgroup "$proc" "top-app" "cpuset"
+    change_task_nice "$proc" "-20"
+  done
+  for proc in logd statsd tombstoned incidentd; do
+    change_task_cgroup "$proc" "background" "cpuset"
+    change_task_nice "$proc" "5"
+  done
+  log 1 "cpu_pin: applied (risk: battery/heat)"
+}
+
+revert_cpu_pin() {
+  rebuild_process_scan_cache
+  for proc in zygote usap surfaceflinger system_server composer logd statsd tombstoned incidentd; do
+    change_task_nice "$proc" "0"
+  done
+  local top="$(pm resolve-activity -a android.intent.action.MAIN -c android.intent.category.HOME | grep packageName | head -n1 | cut -d= -f2) com.android.systemui"
+  for proc in $top; do change_task_nice "$proc" "0"; done
+  log 1 "cpu_pin: reverted (nice reset to 0, cgroup normalizes on next app switch)"
+}
+
 # Single-tweak dispatch - used by the WebUI so flipping one switch applies
+# only that tweak, instantly.
 
 GMS_CATEGORY_KEYS="DISABLE_ADS:ads DISABLE_TRACKING:tracking DISABLE_ANALYTICS:analytics DISABLE_REPORTING:reporting DISABLE_BACKGROUND:background DISABLE_UPDATE:update DISABLE_LOCATION:location DISABLE_GEOFENCE:geofence DISABLE_NEARBY:nearby DISABLE_CAST:cast DISABLE_DISCOVERY:discovery DISABLE_SYNC:sync DISABLE_CLOUD:cloud DISABLE_AUTH:auth DISABLE_WALLET:wallet DISABLE_PAYMENT:payment DISABLE_WEAR:wear DISABLE_FITNESS:fitness"
 
 run_single() {
   # $1 = config key, $2 = new value ("0" or "1")
   load_conf
-  setup_resetprop
   local key="$1" val="$2"
 
   for pair in $GMS_CATEGORY_KEYS; do
     if [ "${pair%%:*}" = "$key" ]; then
-      gms_apply_category "${pair#*:}" "$val"
+      run_tool gms "$GMSLIST" category "${pair#*:}" "$val"
       return 0
     fi
   done
 
   case "$key" in
-    MIUI_SERVICES)      if is_on "$val"; then tweak_miui_services; else restore_miui_services; fi ;;
-    MISC_KILL_SERVICES) if is_on "$val"; then tweak_misc_kill_services; else revert_misc_kill_services; fi ;;
-    SYS_LOG_PROPS)       if is_on "$val"; then tweak_sys_log_props; else revert_props_tag SYS_LOG_PROPS; fi ;;
-    SYS_DALVIK_PROPS)    if is_on "$val"; then tweak_sys_dalvik_props; else revert_props_tag SYS_DALVIK_PROPS; fi ;;
-    CPU_PIN)             if is_on "$val"; then tweak_cpu_pin; else revert_cpu_pin; fi ;;
-    CPU_CORE_HARDCODE)   if is_on "$val"; then tweak_cpu_core_hardcode; else revert_cpu_core_hardcode; fi ;;
-    FIXED_PERF_MODE)     if is_on "$val"; then tweak_fixed_perf_mode; else revert_fixed_perf_mode; fi ;;
-    THERMAL_OVERRIDE)    if is_on "$val"; then tweak_thermal_override; else revert_thermal_override; fi ;;
-    PACKAGES_DEXOPT)     is_on "$val" && tweak_packages_dexopt; true ;;  # one-shot, nothing to revert
-    CMD_MISC)            if is_on "$val"; then tweak_cmd_misc; else revert_cmd_misc; fi ;;
-    LMK_PROPS)           if is_on "$val"; then tweak_lmk_props; else revert_props_tag LMK_PROPS; fi ;;
-    TOMBSTONE_DISABLE)   if is_on "$val"; then tweak_tombstone_disable; else revert_props_tag TOMBSTONE_DISABLE; fi ;;
-    BLUR_DISABLE)        if is_on "$val"; then tweak_blur_disable; else revert_props_tag BLUR_DISABLE; fi ;;
-    LEGACY_MODE)          if is_on "$val"; then tweak_legacy_mode; else revert_props_tag LEGACY_MODE; fi ;;
-    GMS_MASTER)           tweak_gms_services; true ;;
-    GMS_LOG_DISABLE)      if is_on "$val"; then tweak_gms_log_disable; else revert_gms_log_disable; fi ;;
-    DISABLE_DROIDGUARD)   if is_on "$val"; then tweak_droidguard; else revert_droidguard; fi ;;
-    WIFI_QCOM_FIX)       tweak_wifi_qcom_fix; true ;;  # handles both on/off itself
-    WIFI_BAND_CAPABILITY|WIFI_KEY_ARP|WIFI_KEY_NS|WIFI_KEY_MCADDR|WIFI_KEY_POWERSAVE|WIFI_KEY_RUNTIMEPM|WIFI_KEY_ROAM|WIFI_KEY_11D|WIFI_KEY_RTS|WIFI_KEY_SCANTIME|WIFI_KEY_SESSIONS|WIFI_KEY_WAKELOCK)
-      tweak_wifi_qcom_fix; true ;;
+    MIUI_SERVICES|MISC_KILL_SERVICES|SYS_LOG_PROPS|SYS_DALVIK_PROPS|CPU_CORE_HARDCODE|FIXED_PERF_MODE|THERMAL_OVERRIDE|PACKAGES_DEXOPT|CMD_MISC)
+      run_tool miui set "$key" "$val" ;;
+    LMK_PROPS|TOMBSTONE_DISABLE|BLUR_DISABLE)
+      run_tool shared set "$key" "$val" ;;
+    LEGACY_MODE)
+      run_tool legacy set "$key" "$val" ;;
+    GMS_MASTER|GMS_LOG_DISABLE|DISABLE_DROIDGUARD)
+      run_tool gms "$GMSLIST" set "$key" "$val" ;;
+    CPU_PIN)
+      if is_on "$val"; then tweak_cpu_pin; else revert_cpu_pin; fi ;;
+    WIFI_QCOM_FIX|WIFI_BAND_CAPABILITY|WIFI_KEY_ARP|WIFI_KEY_NS|WIFI_KEY_MCADDR|WIFI_KEY_POWERSAVE|WIFI_KEY_RUNTIMEPM|WIFI_KEY_ROAM|WIFI_KEY_11D|WIFI_KEY_RTS|WIFI_KEY_SCANTIME|WIFI_KEY_SESSIONS|WIFI_KEY_WAKELOCK)
+      run_tool wifi "$MODDIR" set "$key" "$val" ;;
     SYSBIN_MASTER|STUB_LOG|STUB_TRACED|STUB_DEBUG|STUB_BUGREPORT|STUB_NETDIAG)
-      tweak_sysbin_stubs; true ;;  # re-patches with the current flags (no-op if WIFI_QCOM_FIX is off)
+      run_tool sysbin "$MODDIR" set "$key" "$val" ;;
     *) log 2 "run_single: unknown key $key" ;;
   esac
   return 0
@@ -169,46 +169,36 @@ run_single() {
 apply_early() {
   # Runs at post-fs-data: properties only (fast, no wait for boot)
   load_conf
-  setup_resetprop
-  tweak_sys_log_props
-  tweak_sys_dalvik_props
-  tweak_lmk_props
-  tweak_tombstone_disable
-  tweak_blur_disable
-  tweak_legacy_mode
-  tweak_wifi_qcom_fix
-  tweak_sysbin_stubs
+  run_tool shared early
+  run_tool miui early
+  run_tool legacy early
+  run_tool wifi "$MODDIR" early
+  run_tool sysbin "$MODDIR" early
 }
 
 apply_late() {
-  # Runs at late boot: services, GMS categories, CPU, dexopt
+  # Runs at late boot: services, GMS categories, CPU, dexopt. Also called
+  # again by service.sh's package-change watcher whenever an app gets
+  # installed, removed, updated, enabled or disabled.
   load_conf
-  setup_resetprop
   log 1 "[START] apply_late"
-  tweak_miui_services
-  tweak_misc_kill_services
-  tweak_gms_services
-  tweak_gms_log_disable
-  tweak_droidguard
+  run_tool miui late
+  run_tool gms "$GMSLIST" late
   tweak_cpu_pin
-  tweak_cpu_core_hardcode
-  tweak_fixed_perf_mode
-  tweak_thermal_override
-  tweak_packages_dexopt
-  tweak_cmd_misc
   log 1 "[END] apply_late"
 }
 
 restore_all() {
   load_conf
-  restore_miui_services
-  restore_gms_services
-  revert_gms_log_disable
-  revert_droidguard
+  run_tool gms "$GMSLIST" set GMS_MASTER 0
+  run_tool gms "$GMSLIST" set DISABLE_DROIDGUARD 0
+  run_tool gms "$GMSLIST" set GMS_LOG_DISABLE 0
+  run_tool miui set MIUI_SERVICES 0
   if [ -f "$PROP_TRACK" ]; then
-    sort -u "$PROP_TRACK" | while IFS= read -r name; do
+    local rp="$(resetprop_bin)"
+    sort -u "$PROP_TRACK" | while IFS=' ' read -r _ name; do
       [ -n "$name" ] || continue
-      resetprop --delete "$name" 2>/dev/null || resetprop -d "$name" 2>/dev/null
+      "$rp" --delete "$name" 2>/dev/null || "$rp" -d "$name" 2>/dev/null
     done
     rm -f "$PROP_TRACK"
   fi

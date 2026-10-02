@@ -1,10 +1,6 @@
 #!/system/bin/sh
 # MIUI Tweaks - loader
+# Most tweak logic now lives in compiled C binaries (src/*.c); engine.sh
+# dispatches to them. Nothing else needs sourcing anymore.
 
 . "$MODDIR/common/engine.sh"
-. "$MODDIR/common/tweaks-miui.sh"
-. "$MODDIR/common/tweaks-shared.sh"
-. "$MODDIR/common/tweaks-gms.sh"
-. "$MODDIR/common/tweaks-wifi.sh"
-. "$MODDIR/common/tweaks-sysbin.sh"
-. "$MODDIR/common/tweaks-legacy.sh"

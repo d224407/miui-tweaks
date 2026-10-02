@@ -1,0 +1,66 @@
+/* legacy.c - GhostGMS Legacy 1.3/2.0 deep prop set.
+ * Usage: legacy <conf> <track> early|late|set LEGACY_MODE <VALUE>
+ */
+#include "common.h"
+
+static const char *PROPS[][2] = {
+  {"av.debug.disable.pers.cache","true"},{"debug.composition.type","gpu"},
+  {"debug.kill_allocating_task","0"},{"debug.qualcomm.sns.daemon","0"},
+  {"debug.qualcomm.sns.hal","0"},{"debug.qualcomm.sns.libsensor1","0"},
+  {"debug.sf.disable_backpressure","1"},{"debug.sf.gpu_comp_tiling","0"},
+  {"debug_test","0"},{"hwui.use_gpu_pixel_buffers","false"},{"live.logcat","disable"},
+  {"log.cffdump","0"},{"log.cffdump_no_memzero","0"},{"log.cffdump_with_ifh","0"},
+  {"log.dumpx","0"},{"log.pm4","0"},{"log.pm4mem","0"},{"log.primitives","0"},
+  {"log.resolves","0"},{"log.sc_dev","0"},{"log.shaders","0"},{"log_ao","0"},
+  {"log_audiodecnode","0"},{"log_audiooutput","0"},{"log_basedecnode","0"},
+  {"log_datapath","0"},{"log_fps_interval","0"},{"log_frame_info","0"},
+  {"log_metadatadriver","0"},{"log_mp4dectime","0"},{"log_mp4parsernode","0"},
+  {"log_omxmp4","0"},{"log_outputnode","0"},{"log_outputnodeinputport","0"},
+  {"log_playerdriver","0"},{"log_playerengine","0"},{"log_posttime","0"},
+  {"log_profile","0"},{"log_surfaceoutput","0"},{"log_videodecnode","0"},
+  {"logcast.live","disable"},{"persist.brcm.ap_crash","none"},{"persist.brcm.cp_crash","none"},
+  {"persist.brcm.log","none"},{"persist.bt.a2dp.aac_disable","true"},
+  {"persist.ims.enableADBLogs","0"},{"persist.ims.enableDebugLogs","0"},
+  {"persist.radio.oem_socket","false"},{"persist.service.lgospd.enable","0"},
+  {"persist.service.pcsync.enable","0"},{"persist.sys.composition.type","gpu"},
+  {"persist.sys.dun.override","0"},{"persist.sys.offlinelog.kernel","1"},
+  {"persist.sys.offlinelog.logcat","1"},{"persist.sys.wfd.virtual","0"},
+  {"pm.sleep_mode","1"},{"profiler.debugmonitor","false"},
+  {"profiler.forse_disable_err_rpt","1"},{"profiler.forse_disable_ulog","1"},
+  {"profiler.hung.dumpdobugreport","false"},{"profiler.launch","false"},
+  {"ro.compcache.default","0"},{"ro.config.ksm.support","false"},{"ro.debuggable","0"},
+  {"ro.egl.destroy_after_detach","false"},{"ro.kernel.android.checkjni","0"},
+  {"ro.kernel.checkjni","0"},{"ro.kernel.qemu.gles","0"},{"ro.sf.battery.log.enabled","0"},
+  {"ro.sf.battery_log","0"},{"ro.telephony.call_ring.multiple","false"},
+  {"sdm.debug.disable_inline_rotator","1"},{"sdm.debug.disable_skip_validate","1"},
+  {"sys.games.gt.prof","1"},{"sys.hwc.gpu_perf_mode","0"},
+  {"vendor.fm.a2dp.conc.disabled","true"},{"vendor.vidc.enc.disable_bframes","1"},
+  {"video.disable.ubwc","1"}, {NULL,NULL}
+};
+/* persist.ims.disabled and wifi.interface=wlan0 from the source module are
+ * intentionally left out, same as the shell version - the first disables
+ * VoLTE/VoWiFi calling, the second is known to bootloop some ROMs. */
+
+static void apply(const char *track) {
+  int n = 0;
+  for (int i = 0; PROPS[i][0]; i++) { mt_set_prop(track, "LEGACY_MODE", PROPS[i][0], PROPS[i][1]); n++; }
+  mt_log(1, "legacy_mode: applied (%d properties)", n);
+}
+
+int main(int argc, char **argv) {
+  if (argc < 4) { fprintf(stderr, "usage: legacy <conf> <track> early|late|set LEGACY_MODE VALUE\n"); return 2; }
+  const char *conf = argv[1], *track = argv[2], *mode = argv[3];
+
+  if (strcmp(mode, "early") == 0 || strcmp(mode, "late") == 0) {
+    if (mt_is_on(conf, "LEGACY_MODE")) apply(track);
+    return 0;
+  }
+  if (strcmp(mode, "set") == 0) {
+    if (argc < 6) { fprintf(stderr, "usage: legacy <conf> <track> set LEGACY_MODE VALUE\n"); return 2; }
+    const char *val = argv[5];
+    if (strcmp(val, "1") == 0) apply(track); else mt_revert_props_tag(track, "LEGACY_MODE");
+    return 0;
+  }
+  fprintf(stderr, "legacy: unknown mode %s\n", mode);
+  return 2;
+}
