@@ -1,12 +1,7 @@
 #!/system/bin/sh
-##############################################################################
 # GMS: service categories + logging
-# Matches the "GMS" section of config/tweaks.conf.
-##############################################################################
 
-############################################################################
 # GMS: service categories
-############################################################################
 
 gms_should_disable() {
   # $1 = category token from gmslist.txt
@@ -36,6 +31,10 @@ gms_should_disable() {
 
 tweak_gms_services() {
   [ -f "$GMSLIST" ] || return 0
+  if ! is_on "$GMS_MASTER"; then
+    restore_gms_services
+    return 0
+  fi
   while IFS='|' read -r svc cat || [ -n "$svc" ]; do
     case "$svc" in ''|'#'*) continue ;; esac
     [ -z "$cat" ] && continue
@@ -49,15 +48,18 @@ tweak_gms_services() {
 }
 
 gms_apply_category() {
-  # $1 = category token, $2 = "1" disable / "0" enable - only touches the
-  # services in that one category, for an instant per-switch toggle.
+  # $1 = category token, $2 = "1" disable / "0" enable
   [ -f "$GMSLIST" ] || return 0
-  local action="pm enable"
+  is_on "$GMS_MASTER" || return 0
+  local action="pm enable" fail=0
   [ "$2" = "1" ] && action="pm disable"
   while IFS='|' read -r svc cat || [ -n "$svc" ]; do
     case "$svc" in ''|'#'*) continue ;; esac
-    [ "$cat" = "$1" ] && $action "$svc" >/dev/null 2>&1
+    if [ "$cat" = "$1" ]; then
+      $action "$svc" >/dev/null 2>&1 || fail=$((fail+1))
+    fi
   done < "$GMSLIST"
+  [ "$fail" -gt 0 ] && log 3 "gms category $1: $fail service(s) failed to apply"
   log 1 "gms category $1: $([ "$2" = "1" ] && echo disabled || echo enabled)"
 }
 
@@ -70,12 +72,22 @@ restore_gms_services() {
   done < "$GMSLIST"
 }
 
-##############################################################################
 # GMS: logging/telemetry Settings.Global keys
-# Distinct from SYS_LOG_PROPS (device-wide sysprops) - these are GMS's own
-# Settings.Global flags, applied via `settings put`, matching what the
-# source GhostGMS module's "Disable GMS Logging" option actually did.
-##############################################################################
+
+tweak_droidguard() {
+  is_on "$DISABLE_DROIDGUARD" || return 0
+  pm disable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService 2>/dev/null \
+    || log 3 "droidguard: pm disable DroidGuardService failed"
+  pm disable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardGcmTaskService 2>/dev/null \
+    || log 3 "droidguard: pm disable DroidGuardGcmTaskService failed"
+  log 1 "droidguard: disabled (breaks SafetyNet/Play Integrity - banking, Wallet, Play Store checks)"
+}
+
+revert_droidguard() {
+  pm enable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardService 2>/dev/null
+  pm enable com.google.android.gms/com.google.android.gms.droidguard.DroidGuardGcmTaskService 2>/dev/null
+  log 1 "droidguard: re-enabled"
+}
 
 GMS_LOG_KEYS="gmscorestat_enabled play_store_panel_logging_enabled clearcut_events clearcut_gcm ga_collection_enabled clearcut_enabled analytics_enabled uploading_enabled bug_report_in_power_menu usage_stats_enabled usagestats_collection_enabled"
 

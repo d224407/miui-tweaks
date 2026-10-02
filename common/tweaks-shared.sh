@@ -1,8 +1,5 @@
 #!/system/bin/sh
-##############################################################################
 # Shared (MIUI + GMS): low-level tweaks that don't belong to either side
-# specifically. Matches the "Shared" section of config/tweaks.conf.
-##############################################################################
 
 tweak_lmk_props() {
   is_on "$LMK_PROPS" || return 0

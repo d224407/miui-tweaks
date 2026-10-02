@@ -1,22 +1,5 @@
 #!/system/bin/sh
-##############################################################################
 # MIUI Tweaks - engine
-#
-# The "apply" side: config loading, shared helpers, the property-tracking
-# system, the CPU/cgroup helpers, the single-tweak dispatcher used by the
-# WebUI, and the three entry points (apply_early/apply_late/restore_all).
-#
-# This file has no tweak-specific data - what actually gets changed on the
-# device lives in the sibling tweaks-*.sh files, one per section of
-# config/tweaks.conf. common/load.sh sources this file plus every
-# tweaks-*.sh together, and is what post-fs-data.sh, service.sh,
-# uninstall.sh and the WebUI all source.
-#
-# MODDIR must already be set by whoever sources common/load.sh (directly
-# executed scripts can derive it from their own $0; anything that sources
-# load.sh instead - like the WebUI - must set MODDIR itself first, since
-# $0 does not change across a `.`/source and so cannot be trusted here).
-##############################################################################
 
 CONF="$MODDIR/config/tweaks.conf"
 LOGFILE="/storage/emulated/0/Android/miui_tweaks.log"
@@ -41,10 +24,7 @@ is_on() {
   [ "$1" = "1" ]
 }
 
-##############################################################################
 # Property tracking (set_prop/apply_prop_block/revert_props_tag) and the
-# resetprop shim
-##############################################################################
 
 PROP_TRACK="$MODDIR/config/.applied_props"
 
@@ -94,13 +74,9 @@ terminate_service() {
   stop "$1" 2>/dev/null
 }
 
-##############################################################################
 # CPU / cgroup helpers
-##############################################################################
 
-############################################################################
 # CPU / cgroup helpers
-############################################################################
 
 ps_ret=""
 rebuild_process_scan_cache() { ps_ret="$(ps -Ao pid,args)"; }
@@ -143,11 +119,7 @@ pin_proc_on_perf() {
   change_task_affinity "$1" "$(get_full_cpu_mask)"
 }
 
-############################################################################
 # Single-tweak dispatch - used by the WebUI so flipping one switch applies
-# or fully reverts just that tweak immediately, without waiting for a
-# reboot or a full apply_early/apply_late pass.
-############################################################################
 
 GMS_CATEGORY_KEYS="DISABLE_ADS:ads DISABLE_TRACKING:tracking DISABLE_ANALYTICS:analytics DISABLE_REPORTING:reporting DISABLE_BACKGROUND:background DISABLE_UPDATE:update DISABLE_LOCATION:location DISABLE_GEOFENCE:geofence DISABLE_NEARBY:nearby DISABLE_CAST:cast DISABLE_DISCOVERY:discovery DISABLE_SYNC:sync DISABLE_CLOUD:cloud DISABLE_AUTH:auth DISABLE_WALLET:wallet DISABLE_PAYMENT:payment DISABLE_WEAR:wear DISABLE_FITNESS:fitness"
 
@@ -179,18 +151,20 @@ run_single() {
     TOMBSTONE_DISABLE)   if is_on "$val"; then tweak_tombstone_disable; else revert_props_tag TOMBSTONE_DISABLE; fi ;;
     BLUR_DISABLE)        if is_on "$val"; then tweak_blur_disable; else revert_props_tag BLUR_DISABLE; fi ;;
     LEGACY_MODE)          if is_on "$val"; then tweak_legacy_mode; else revert_props_tag LEGACY_MODE; fi ;;
+    GMS_MASTER)           tweak_gms_services; true ;;
     GMS_LOG_DISABLE)      if is_on "$val"; then tweak_gms_log_disable; else revert_gms_log_disable; fi ;;
+    DISABLE_DROIDGUARD)   if is_on "$val"; then tweak_droidguard; else revert_droidguard; fi ;;
     WIFI_QCOM_FIX)       tweak_wifi_qcom_fix; true ;;  # handles both on/off itself
     WIFI_BAND_CAPABILITY|WIFI_KEY_ARP|WIFI_KEY_NS|WIFI_KEY_MCADDR|WIFI_KEY_POWERSAVE|WIFI_KEY_RUNTIMEPM|WIFI_KEY_ROAM|WIFI_KEY_11D|WIFI_KEY_RTS|WIFI_KEY_SCANTIME|WIFI_KEY_SESSIONS|WIFI_KEY_WAKELOCK)
-      tweak_wifi_qcom_fix; true ;;  # re-patches with the current flags (no-op if WIFI_QCOM_FIX is off)
+      tweak_wifi_qcom_fix; true ;;
+    SYSBIN_MASTER|STUB_LOG|STUB_TRACED|STUB_DEBUG|STUB_BUGREPORT|STUB_NETDIAG)
+      tweak_sysbin_stubs; true ;;  # re-patches with the current flags (no-op if WIFI_QCOM_FIX is off)
     *) log 2 "run_single: unknown key $key" ;;
   esac
   return 0
 }
 
-############################################################################
 # Entry points
-############################################################################
 
 apply_early() {
   # Runs at post-fs-data: properties only (fast, no wait for boot)
@@ -203,6 +177,7 @@ apply_early() {
   tweak_blur_disable
   tweak_legacy_mode
   tweak_wifi_qcom_fix
+  tweak_sysbin_stubs
 }
 
 apply_late() {
@@ -214,6 +189,7 @@ apply_late() {
   tweak_misc_kill_services
   tweak_gms_services
   tweak_gms_log_disable
+  tweak_droidguard
   tweak_cpu_pin
   tweak_cpu_core_hardcode
   tweak_fixed_perf_mode
@@ -228,6 +204,7 @@ restore_all() {
   restore_miui_services
   restore_gms_services
   revert_gms_log_disable
+  revert_droidguard
   if [ -f "$PROP_TRACK" ]; then
     sort -u "$PROP_TRACK" | while IFS= read -r name; do
       [ -n "$name" ] || continue

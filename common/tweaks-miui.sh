@@ -1,12 +1,7 @@
 #!/system/bin/sh
-##############################################################################
 # MIUI: services, system properties, CPU/scheduling, misc
-# Matches the "MIUI - ..." sections of config/tweaks.conf.
-##############################################################################
 
-############################################################################
 # MIUI: services
-############################################################################
 
 MIUI_SERVICE_LIST="com.miui.systemAdSolution
 com.miui.analytics
@@ -35,8 +30,11 @@ com.miui.daemon/.mqsas.OmniTestReceiver"
 
 tweak_miui_services() {
   is_on "$MIUI_SERVICES" || return 0
-  for s in $MIUI_SERVICE_LIST; do pm disable "$s" >/dev/null 2>&1; done
-  log 1 "miui_services: disabled"
+  local failed=0
+  for s in $MIUI_SERVICE_LIST; do
+    pm disable "$s" >/dev/null 2>&1 || { log 3 "miui_services: failed to disable $s (not present on this ROM?)"; failed=$((failed+1)); }
+  done
+  log 1 "miui_services: disabled ($failed failures)"
 }
 
 restore_miui_services() {
@@ -57,9 +55,7 @@ revert_misc_kill_services() {
   for s in $MISC_KILL_LIST; do start "$s" 2>/dev/null; done
   log 1 "misc_kill_services: reverted (best effort - some restart via init automatically)"
 }
-############################################################################
 # System properties (deduped: shared between MIUI+GMS originals)
-############################################################################
 
 tweak_sys_log_props() {
   is_on "$SYS_LOG_PROPS" || return 0
@@ -131,9 +127,7 @@ persist.device_config.runtime_native.usap_pool_enabled true"
   log 1 "sys_dalvik_props: applied"
 }
 
-############################################################################
 # MIUI: CPU / scheduling (higher risk - off by default)
-############################################################################
 
 tweak_cpu_pin() {
   is_on "$CPU_PIN" || return 0
@@ -204,9 +198,7 @@ revert_thermal_override() {
   cmd thermalservice reset
   log 1 "thermal_override: reverted"
 }
-############################################################################
 # MIUI: misc
-############################################################################
 
 tweak_packages_dexopt() {
   is_on "$PACKAGES_DEXOPT" || return 0

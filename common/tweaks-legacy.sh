@@ -1,8 +1,5 @@
 #!/system/bin/sh
-##############################################################################
 # Legacy (GhostGMS Legacy 1.3/2.0 deep tweak set)
-# Matches the "Legacy" section of config/tweaks.conf.
-##############################################################################
 
 tweak_legacy_mode() {
   is_on "$LEGACY_MODE" || return 0

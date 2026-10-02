@@ -1,16 +1,7 @@
 #!/system/bin/sh
-##############################################################################
 # Wi-Fi (Qualcomm WCNSS config patch)
-# Matches the "Wi-Fi" section of config/tweaks.conf.
-##############################################################################
 
-############################################################################
 # Wi-Fi: Qualcomm WCNSS config patch
-# Reduces qcom_rx_wakelock wakeups / Wi-Fi battery drain (hostArpOffload,
-# hostNsOffload being the main ones). Generates a patched WCNSS_qcom_cfg.ini
-# as a module overlay at post-fs-data, so it takes effect after the next
-# reboot. Turning the tweak off removes the overlay.
-############################################################################
 
 WIFI_CACHE="$MODDIR/config/.wifi_cfg_paths"
 
@@ -29,9 +20,14 @@ wifi_overlay_path() {
 }
 
 wifi_set_key() {
-  # $1=file $2=key $3=value (replace if present, append if not)
+  # $1=file $2=key $3=value (replace if present, insert if not).
+  # The WCNSS parser stops reading at a line that is just "END" - anything
+  # appended after it is silently ignored, so a new key must be inserted
+  # *before* that line, not tacked onto the end of the file.
   if grep -q "^[[:space:]]*$2=" "$1"; then
     sed -i "s|^[[:space:]]*$2=.*|$2=$3|" "$1"
+  elif grep -q "^[[:space:]]*END[[:space:]]*$" "$1"; then
+    sed -i "0,/^[[:space:]]*END[[:space:]]*$/s||$2=$3\n&|" "$1"
   else
     [ -n "$(tail -c1 "$1")" ] && echo >> "$1"
     echo "$2=$3" >> "$1"
@@ -51,8 +47,8 @@ tweak_wifi_qcom_fix() {
     found=1
     src="$cfg"
     [ -f "/sbin/.magisk/mirror$cfg" ] && src="/sbin/.magisk/mirror$cfg"
-    mkdir -p "$(dirname "$dst")"
-    cp -f "$src" "$dst" || continue
+    mkdir -p "$(dirname "$dst")" || { log 3 "wifi_qcom_fix: mkdir failed for $dst"; continue; }
+    cp -f "$src" "$dst" || { log 3 "wifi_qcom_fix: cp failed, $src -> $dst"; continue; }
     is_on "$WIFI_KEY_ARP" && wifi_set_key "$dst" hostArpOffload 0
     is_on "$WIFI_KEY_NS" && wifi_set_key "$dst" hostNsOffload 0
     is_on "$WIFI_KEY_MCADDR" && wifi_set_key "$dst" gMCAddrListEnable 1

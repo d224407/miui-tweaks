@@ -7,14 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="top-bar">
-  <div class="eyebrow">Root Module</div>
-  <h1>MIUI Tweaks</h1>
-</div>
-
-<div class="content">
-  <div class="banner">Toggling a switch applies that tweak immediately. A group's master row bulk-enables everything below it if nothing is selected yet, or bulk-disables your current picks if some already are.</div>
-
+<div class="content" style="padding-top:calc(16px + env(safe-area-inset-top,0px))">
   <div class="stat-card">
     <span class="label">Enabled</span>
     <span class="value" id="enabledCount">0</span>
@@ -46,6 +39,14 @@
     <button class="btn" id="btnLog">View log</button>
   </div>
   <pre class="logbox" id="logbox" style="display:none"></pre>
+</div>
+
+<div class="subpage-overlay" id="subpage">
+  <div class="subpage-header">
+    <button class="subpage-back" id="subpageBack">&#8592;</button>
+    <div class="subpage-title" id="subpageTitle"></div>
+  </div>
+  <div class="subpage-content" id="subpageContent"></div>
 </div>
 
 <script src="script.js"></script>
