@@ -37,7 +37,7 @@ MODID="$(grep '^id=' "$MODPATH/module.prop" | cut -d= -f2)"
 merge_old_config
 
 ui_print "- MIUI Tweaks installed"
-ui_print "- A safe default set of tweaks is enabled on first install (see README.md)"
+ui_print "- A safe default set of tweaks is enabled on first install"
 ui_print "- Open the module's WebUI to review or change each tweak"
 
 ui_print "- Extracting tweak-tool binaries for this device's ABI..."

@@ -155,7 +155,7 @@ run_single() {
       run_tool gms "$GMSLIST" set "$key" "$val" ;;
     CPU_PIN)
       if is_on "$val"; then tweak_cpu_pin; else revert_cpu_pin; fi ;;
-    WIFI_QCOM_FIX|WIFI_BAND_CAPABILITY|WIFI_KEY_ARP|WIFI_KEY_NS|WIFI_KEY_MCADDR|WIFI_KEY_POWERSAVE|WIFI_KEY_RUNTIMEPM|WIFI_KEY_ROAM|WIFI_KEY_11D|WIFI_KEY_RTS|WIFI_KEY_SCANTIME|WIFI_KEY_SESSIONS|WIFI_KEY_WAKELOCK)
+    WIFI_QCOM_FIX)
       run_tool wifi "$MODDIR" set "$key" "$val" ;;
     SYSBIN_MASTER|STUB_LOG|STUB_TRACED|STUB_DEBUG|STUB_BUGREPORT|STUB_NETDIAG)
       run_tool sysbin "$MODDIR" set "$key" "$val" ;;

@@ -125,11 +125,8 @@ static void set_key(const char *path, const char *key, const char *value) {
   rename(tmp_path, path);
 }
 
-static void apply_band_capability(const char *dst, const char *val) {
-  if (strcmp(val, "1") == 0 || strcmp(val, "2") == 0) set_key(dst, "BandCapability", val);
-}
-
 static void patch_one(const char *conf, const char *cfg, int enable) {
+  (void)conf; /* no longer needed - every key below is unconditional now */
   char dst[PATH_MAX];
   overlay_path(cfg, dst, sizeof(dst));
 
@@ -150,19 +147,18 @@ static void patch_one(const char *conf, const char *cfg, int enable) {
 
   if (copy_file(src, dst) != 0) { mt_log(3, "wifi_qcom_fix: cp failed, %s -> %s", src, dst); return; }
 
-  if (mt_is_on(conf, "WIFI_KEY_ARP")) set_key(dst, "hostArpOffload", "0");
-  if (mt_is_on(conf, "WIFI_KEY_NS")) set_key(dst, "hostNsOffload", "0");
-  if (mt_is_on(conf, "WIFI_KEY_MCADDR")) set_key(dst, "gMCAddrListEnable", "1");
-  if (mt_is_on(conf, "WIFI_KEY_POWERSAVE")) set_key(dst, "gEnablePowerSaveOffload", "5");
-  if (mt_is_on(conf, "WIFI_KEY_RUNTIMEPM")) set_key(dst, "gRuntimePM", "1");
-  if (mt_is_on(conf, "WIFI_KEY_ROAM")) set_key(dst, "RoamRssiDiff", "3");
-  if (mt_is_on(conf, "WIFI_KEY_11D")) set_key(dst, "g11dSupportEnabled", "0");
-  if (mt_is_on(conf, "WIFI_KEY_RTS")) set_key(dst, "RTSThreshold", "1048576");
-  if (mt_is_on(conf, "WIFI_KEY_SCANTIME")) { set_key(dst, "gActiveMaxChannelTime", "40"); set_key(dst, "gActiveMinChannelTime", "20"); }
-  if (mt_is_on(conf, "WIFI_KEY_SESSIONS")) set_key(dst, "gMaxConcurrentActiveSessions", "2");
-  if (mt_is_on(conf, "WIFI_KEY_WAKELOCK")) set_key(dst, "rx_wakelock_timeout", "0");
-  char band[8] = {0};
-  if (mt_conf_get(conf, "WIFI_BAND_CAPABILITY", band, sizeof(band))) apply_band_capability(dst, band);
+  set_key(dst, "hostArpOffload", "0");
+  set_key(dst, "hostNsOffload", "0");
+  set_key(dst, "gMCAddrListEnable", "1");
+  set_key(dst, "gEnablePowerSaveOffload", "5");
+  set_key(dst, "gRuntimePM", "1");
+  set_key(dst, "RoamRssiDiff", "3");
+  set_key(dst, "g11dSupportEnabled", "0");
+  set_key(dst, "RTSThreshold", "1048576");
+  set_key(dst, "gActiveMaxChannelTime", "40");
+  set_key(dst, "gActiveMinChannelTime", "20");
+  set_key(dst, "gMaxConcurrentActiveSessions", "2");
+  set_key(dst, "rx_wakelock_timeout", "0");
 
   chmod(dst, 0644);
   if (stat(src, &st) == 0) chown(dst, st.st_uid, st.st_gid);
@@ -202,8 +198,8 @@ int main(int argc, char **argv) {
   }
 
   if (strcmp(mode, "set") == 0) {
-    /* Any WIFI_KEY_x, WIFI_BAND_CAPABILITY or WIFI_QCOM_FIX change
-       re-patches with the full current flag set - matches run_single. */
+    /* Only WIFI_QCOM_FIX exists now - on applies every fix at once, off
+       removes the overlay file. */
     run_wifi_fix(conf);
     return 0;
   }

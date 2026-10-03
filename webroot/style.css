@@ -1,96 +1,101 @@
-/* Color tokens + dark/light values taken from Specter's own theme init
-   (default "monet" preset primary swapped for a fixed purple seed, since
-   this page has no wallpaper to sample). */
+/* Color tokens - the exact "blue" preset values from Specter's own
+   js/presets.json (blue_light / blue_dark), not approximated. */
 :root {
-  --md-sys-color-primary: #6750a4;
+  --md-sys-color-primary: #495d92;
   --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #eaddff;
-  --md-sys-color-on-primary-container: #21005d;
-  --md-sys-color-secondary-container: #e8def8;
-  --md-sys-color-on-secondary-container: #1d192b;
-  --md-sys-color-error-container: #f9dedc;
-  --md-sys-color-on-error-container: #410e0b;
-  --md-sys-color-surface: #fffbff;
-  --md-sys-color-surface-container: #f3edf7;
-  --md-sys-color-surface-container-high: #ece6f0;
-  --md-sys-color-surface-container-highest: #e6e0e9;
-  --md-sys-color-on-surface: #1c1b1f;
-  --md-sys-color-on-surface-variant: #49454f;
-  --md-sys-color-outline: #79747e;
-  --md-sys-color-outline-variant: #cac4d0;
+  --md-sys-color-primary-container: #dae2ff;
+  --md-sys-color-on-primary-container: #304578;
+  --md-sys-color-secondary-container: #dce2f9;
+  --md-sys-color-on-secondary-container: #404659;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #93000a;
+  --md-sys-color-surface: #faf8ff;
+  --md-sys-color-surface-container: #f1f0f7;
+  --md-sys-color-surface-container-high: #eeedf4;
+  --md-sys-color-surface-container-highest: #e8e7ef;
+  --md-sys-color-on-surface: #1a1b21;
+  --md-sys-color-on-surface-variant: #45464f;
+  --md-sys-color-outline: #757780;
+  --md-sys-color-outline-variant: #c5c6d0;
   --sp-font-family: 'Google Sans', Roboto, system-ui, -apple-system, sans-serif;
-  --sp-font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  --sp-font-mono: "JetBrains Mono Variable", 'JetBrains Mono', 'Courier New', Courier, monospace;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --md-sys-color-primary: #d0bcff;
-    --md-sys-color-on-primary: #381e72;
-    --md-sys-color-primary-container: #4f378b;
-    --md-sys-color-on-primary-container: #eaddff;
-    --md-sys-color-secondary-container: #4a4458;
-    --md-sys-color-on-secondary-container: #e8def8;
-    --md-sys-color-error-container: #8c1d18;
-    --md-sys-color-on-error-container: #f9dedc;
-    --md-sys-color-surface: #141318;
-    --md-sys-color-surface-container: #211f26;
-    --md-sys-color-surface-container-high: #1e1c20;
-    --md-sys-color-surface-container-highest: #232126;
-    --md-sys-color-on-surface: #e6e0e9;
-    --md-sys-color-on-surface-variant: #cac4d0;
-    --md-sys-color-outline: #938f99;
-    --md-sys-color-outline-variant: #49454f;
+    --md-sys-color-primary: #b2c5ff;
+    --md-sys-color-on-primary: #182e60;
+    --md-sys-color-primary-container: #304578;
+    --md-sys-color-on-primary-container: #dae2ff;
+    --md-sys-color-secondary-container: #404659;
+    --md-sys-color-on-secondary-container: #dce2f9;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffdad6;
+    --md-sys-color-surface: #121318;
+    --md-sys-color-surface-container: #1e1f25;
+    --md-sys-color-surface-container-high: #282a2f;
+    --md-sys-color-surface-container-highest: #33343a;
+    --md-sys-color-on-surface: #e3e2e9;
+    --md-sys-color-on-surface-variant: #c5c6d0;
+    --md-sys-color-outline: #8f909a;
+    --md-sys-color-outline-variant: #45464f;
   }
 }
+
+/* JetBrains Mono Variable - bundled (OFL licensed, safe to ship). */
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  src: url("fonts/JetBrainsMono-var.woff2") format("woff2-variations");
+  font-weight: 1 1000;
+  font-stretch: 1 100;
+}
+/* Material Icons - bundled straight from Specter's own repo (Apache 2.0,
+   safe to ship). Its "outlined" file is a byte-identical placeholder in
+   the copy we were given, so the outline/fill swap is wired up correctly
+   but looks the same until a real outlined font replaces that file. */
+@font-face { font-family: 'Material Icons'; font-style: normal; font-weight: 400; src: url('fonts/material-icons.woff2') format('woff2'); }
+@font-face { font-family: 'Material Icons Outlined'; font-style: normal; font-weight: 400; src: url('fonts/material-icons-outlined.woff2') format('woff2'); }
+
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
 body {
   font-family: var(--sp-font-family);
   background: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
-  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
 
-.top-bar {
-  padding: 16px 20px;
-  background: var(--md-sys-color-surface);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  min-height: 64px;
+/* --- Sliding page track, same mechanism as Specter's #pages/navigation.ts
+   (translate3d, 320ms cubic-bezier(0.2,0.8,0.2,1)) - JS drives the
+   transform, this just sets up the flex row and sizing. */
+#pages {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  will-change: transform;
+}
+.panel {
+  width: 50%;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
-.top-bar .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--md-sys-color-primary); }
-.top-bar h1 { font-size: 22px; font-weight: 500; line-height: 1.3; margin-top: 2px; color: var(--md-sys-color-on-surface); }
+.panel-inner { padding: 0 16px calc(96px + env(safe-area-inset-bottom,0px)); flex: 1; }
 
-.content { padding: 0 16px 24px; max-width: 800px; margin: 0 auto; }
-
-.banner {
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  padding: 14px 16px;
-  border-radius: 24px;
-  font-size: 13px;
-  line-height: 1.4;
-  margin-bottom: 16px;
+/* Search bar doubles as the page's only top bar - collapses out of the
+   way on scroll-down since there's no room to spare on a phone screen,
+   reappears on scroll-up. */
+.search-bar-wrap {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--md-sys-color-surface);
+  padding: calc(12px + env(safe-area-inset-top,0px)) 16px 10px;
+  transition: transform .2s ease, opacity .2s ease;
 }
-
-.stat-card {
-  background: var(--md-sys-color-surface-container-highest);
-  border-radius: 24px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.stat-card .label { font-size: 13px; color: var(--md-sys-color-on-surface-variant); font-weight: 500; }
-.stat-card .value { font-size: 28px; font-weight: 600; color: var(--md-sys-color-primary); }
-
+.search-bar-wrap.collapsed { transform: translateY(-120%); opacity: 0; }
 .search-bar {
   display: flex;
   align-items: center;
@@ -98,77 +103,36 @@ body {
   background: var(--md-sys-color-surface-container-highest);
   border-radius: 9999px;
   padding: 10px 20px;
-  margin-bottom: 16px;
 }
 .search-bar svg { flex-shrink: 0; fill: var(--md-sys-color-on-surface-variant); }
-.search-bar input { flex: 1; border: none; outline: none; background: transparent; font-size: 15px; color: var(--md-sys-color-on-surface); font-family: inherit; }
+.search-bar input { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; color: var(--md-sys-color-on-surface); font-family: inherit; }
 .search-bar input::placeholder { color: var(--md-sys-color-on-surface-variant); }
-
-.segmented {
-  display: flex;
-  background: var(--md-sys-color-surface-container-highest);
-  border-radius: 9999px;
-  padding: 4px;
-  gap: 4px;
-  margin-bottom: 20px;
-}
-.segmented button {
-  flex: 1;
-  border: none;
-  background: transparent;
-  border-radius: 9999px;
-  padding: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
-  cursor: pointer;
-  font-family: inherit;
-}
-.segmented button.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 
 /* Grouped "list-container" of pill-edged rows, same corner technique as
    Specter: full pill if alone, 24/24/4/4 top, 4px square middle rows,
    4/4/24/24 bottom. */
-.list-title {
-  color: var(--md-sys-color-on-surface-variant);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  font-size: 11px;
-  font-weight: 600;
-  margin: 18px 4px 8px;
-}
-.list-title:first-child { margin-top: 4px; }
+.list-title { font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--md-sys-color-primary); margin: 20px 4px 8px; }
 .list-container { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+
 .tweak-row {
-  background: var(--md-sys-color-surface-container-high);
-  border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 14px 18px;
-  min-height: 56px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 4px;
   transition: border-radius .15s;
 }
 .list-container > .tweak-row:only-child { border-radius: 24px; }
 .list-container > .tweak-row:first-child:not(:only-child) { border-radius: 24px 24px 4px 4px; }
 .list-container > .tweak-row:last-child:not(:only-child) { border-radius: 4px 4px 24px 24px; }
-
-/* Master row of a group: pill-shaped and highlighted when any child is on,
-   mirrors Specter's .subpage-master-item / --active treatment. */
-.master-row {
-  border-radius: 9999px !important;
-  padding: 18px 22px;
-  cursor: pointer;
-  margin-bottom: 2px;
-}
 .master-row.active { background: var(--md-sys-color-primary-container) !important; }
 .master-row.active .tweak-name { color: var(--md-sys-color-on-primary-container); }
 .master-row.active .tweak-desc { color: var(--md-sys-color-on-primary-container); opacity: .85; }
-.group-children { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
 
 .tweak-info { flex: 1; min-width: 0; }
-.tweak-name { font-size: 14px; font-weight: 500; color: var(--md-sys-color-on-surface); }
-.tweak-desc { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; line-height: 1.35; }
+.tweak-name { font-size: 15.5px; font-weight: 500; color: var(--md-sys-color-on-surface); }
+.tweak-desc { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; line-height: 1.4; }
 .tweak-tag {
   display: inline-block;
   margin-left: 6px;
@@ -181,6 +145,8 @@ body {
   vertical-align: middle;
 }
 
+/* --- Switch - M3 proportions (52x32 track / 24px thumb when on),
+   matching the real <md-switch> component Specter uses. */
 .switch {
   position: relative;
   width: 52px;
@@ -194,11 +160,23 @@ body {
 }
 .switch.on { background: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary); }
 .switch .thumb {
-  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+  position: absolute; top: 50%; left: 4px; width: 16px; height: 16px;
   border-radius: 50%; background: var(--md-sys-color-outline);
-  transition: transform .15s, background .15s;
+  transform: translateY(-50%);
+  transition: transform .15s, background .15s, width .15s, height .15s, left .15s;
 }
-.switch.on .thumb { background: var(--md-sys-color-on-primary); transform: translateX(20px); }
+.switch.on .thumb {
+  width: 24px; height: 24px; left: 24px;
+  background: var(--md-sys-color-on-primary); transform: translateY(-50%);
+}
+
+/* --- Master/group row that opens a bulk-config subpage: chevron + a
+   straight 1px divider + switch, copied from Specter's own
+   .li-toggle-action/.li-config-chevron/.li-config-divider - no rounded
+   popup chrome, just this. */
+.li-toggle-action { display: flex; align-items: center; gap: 14px; flex-shrink: 0; margin-left: auto; color: var(--md-sys-color-on-surface-variant); }
+.li-config-chevron { width: 8px; height: 14px; color: inherit; opacity: .65; flex-shrink: 0; }
+.li-config-divider { width: 1px; height: 32px; background-color: currentColor; opacity: .3; flex-shrink: 0; }
 
 .mini-select { display: flex; border-radius: 9999px; overflow: hidden; background: var(--md-sys-color-surface-container-highest); flex-shrink: 0; }
 .mini-select button { border: none; background: transparent; color: var(--md-sys-color-on-surface-variant); font-size: 12px; font-weight: 500; padding: 8px 12px; cursor: pointer; font-family: inherit; }
@@ -215,47 +193,31 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.scroll-area { max-height: 62vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.scroll-area::-webkit-scrollbar { width: 4px; }
-.scroll-area::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant); border-radius: 4px; }
-
 .action-row { display: flex; gap: 10px; margin-top: 16px; }
 .btn {
   flex: 1; border: none; background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
-  padding: 13px; border-radius: 9999px; font-size: 14px; font-weight: 500;
+  padding: 13px; border-radius: 9999px; font-size: 14.5px; font-weight: 500;
   cursor: pointer; font-family: inherit;
 }
 .btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
-
-.logbox {
-  margin-top: 14px;
-  background: var(--md-sys-color-surface-container-high);
-  border-radius: 20px;
-  padding: 14px 16px;
-  font-family: var(--sp-font-mono);
-  font-size: 11px;
-  line-height: 1.6;
-  max-height: 240px;
-  overflow: auto;
-  white-space: pre-wrap;
-  color: var(--md-sys-color-on-surface-variant);
-}
 
 .snackbar {
   position: fixed; left: 16px; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom,0px)); max-width: 768px;
   margin: 0 auto; background: var(--md-sys-color-on-surface);
   color: var(--md-sys-color-surface);
   padding: 14px 20px; border-radius: 14px; font-size: 14px;
-  box-shadow: 0 4px 20px rgba(0,0,0,.26); z-index: 999;
+  box-shadow: 0 4px 20px rgba(0,0,0,.26); z-index: 1200;
   animation: rise .25s cubic-bezier(.2,0,0,1);
 }
 @keyframes rise { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 .master-row { cursor: pointer; }
 .master-row .switch { cursor: pointer; }
+
+/* --- Subpage overlay (bulk-config screens) --- */
 .subpage-overlay {
-  position: fixed; inset: 0; z-index: 999;
+  position: fixed; inset: 0; z-index: 1100;
   background: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
   display: none; flex-direction: column;
@@ -279,23 +241,10 @@ body {
 .subpage-content { flex: 1; overflow-y: auto; padding: 0 16px calc(24px + env(safe-area-inset-bottom,0px)); }
 .subpage-bulk-row { display: flex; gap: 10px; margin-bottom: 14px; }
 
-/* JetBrains Mono Variable - bundled (OFL licensed, safe to ship).
-   Google Sans Variable is NOT bundled here - it's Google's own
-   proprietary font; we fall back to the system "Google Sans" that is
-   already installed on Pixel/MIUI devices instead of redistributing it. */
-@font-face {
-  font-family: "JetBrains Mono Variable";
-  src: url("fonts/JetBrainsMono-var.woff2") format("woff2-variations");
-  font-weight: 1 1000;
-  font-stretch: 1 100;
-}
-:root { --sp-font-mono: "JetBrains Mono Variable", 'JetBrains Mono', 'Courier New', Courier, monospace; }
-
-/* Two full-height tab panels, switched by the bottom nav below. */
-.panel { padding: 16px 16px calc(96px + env(safe-area-inset-bottom,0px)); min-height: 100%; box-sizing: border-box; }
-
-.log-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 14px; }
-.log-title { font-size: 20px; font-weight: 500; color: var(--md-sys-color-on-surface); }
+/* --- Log panel: fills the full page, filter chips, copy/refresh --- */
+#panel-log .panel-inner { display: flex; flex-direction: column; padding-bottom: calc(16px + env(safe-area-inset-bottom,0px)); height: 100%; }
+.log-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 10px; flex-shrink: 0; }
+.log-title { font-size: 21px; font-weight: 500; color: var(--md-sys-color-on-surface); }
 .log-actions { display: flex; gap: 4px; }
 .icon-btn {
   width: 40px; height: 40px; border-radius: 20px; border: none;
@@ -304,16 +253,35 @@ body {
   transition: background .15s ease;
 }
 .icon-btn:active { background: var(--md-sys-color-surface-container-highest); }
-.logbox { margin: 0; }
 
-/* Material Icons - bundled straight from Specter's own repo (Apache 2.0,
-   safe to ship). Its "outlined" file is a byte-identical placeholder in
-   the copy we were given, so the outline/fill swap below is wired up
-   correctly but will look the same until a real outlined font is dropped
-   in - swap webroot/fonts/material-icons-outlined.woff2 for the genuine
-   file if you have one. */
-@font-face { font-family: 'Material Icons'; font-style: normal; font-weight: 400; src: url('fonts/material-icons.woff2') format('woff2'); }
-@font-face { font-family: 'Material Icons Outlined'; font-style: normal; font-weight: 400; src: url('fonts/material-icons-outlined.woff2') format('woff2'); }
+.log-filters { display: flex; gap: 8px; padding: 0 4px 12px; flex-shrink: 0; }
+.log-filter {
+  border: none; cursor: pointer; font-family: inherit;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .02em;
+  padding: 7px 14px; border-radius: 9999px;
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  transition: background .15s, color .15s;
+}
+.log-filter.active { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.log-filter[data-level="ERROR"].active { background: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); }
+
+.logbox {
+  flex: 1;
+  margin: 0 0 calc(80px + env(safe-area-inset-bottom,0px));
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 20px;
+  padding: 14px 16px;
+  font-family: var(--sp-font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.log-line--ERROR { color: var(--md-sys-color-error-container, #ffb4ab); }
+.log-line--WARN { color: #e5a94d; }
 
 /* --- Floating navigation bar - copied verbatim from Specter's own
    .nav-bar/.nav-indicator/.nav-tab rules (src/webroot/css/app.css),

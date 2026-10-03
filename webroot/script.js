@@ -16,18 +16,9 @@ const DEFAULTS = {
   DISABLE_NEARBY: "0", DISABLE_CAST: "0", DISABLE_DISCOVERY: "0", DISABLE_SYNC: "0",
   DISABLE_CLOUD: "0", DISABLE_AUTH: "0", DISABLE_WALLET: "0", DISABLE_PAYMENT: "0",
   DISABLE_WEAR: "0", DISABLE_FITNESS: "0",
-  WIFI_QCOM_FIX: "0", WIFI_BAND_CAPABILITY: "0",
-  WIFI_KEY_ARP: "1", WIFI_KEY_NS: "1", WIFI_KEY_MCADDR: "1", WIFI_KEY_POWERSAVE: "1",
-  WIFI_KEY_RUNTIMEPM: "1", WIFI_KEY_ROAM: "1", WIFI_KEY_11D: "1", WIFI_KEY_RTS: "1",
-  WIFI_KEY_SCANTIME: "1", WIFI_KEY_SESSIONS: "1", WIFI_KEY_WAKELOCK: "1",
+  WIFI_QCOM_FIX: "0",
   SYSBIN_MASTER: "0", STUB_LOG: "0", STUB_TRACED: "0", STUB_DEBUG: "0", STUB_BUGREPORT: "0", STUB_NETDIAG: "0",
   LEGACY_MODE: "0"
-};
-
-const SELECT_OPTIONS = {
-  WIFI_BAND_CAPABILITY: [
-    { value: "0", label: "Auto" }, { value: "1", label: "2.4GHz" }, { value: "2", label: "5GHz" },
-  ],
 };
 
 const SECTIONS = [
@@ -82,26 +73,9 @@ const SECTIONS = [
       ["DISABLE_DROIDGUARD", "Disable DroidGuard", "Breaks SafetyNet/Play Integrity - banking apps, Google Wallet, Play Store integrity checks will fail", true],
     ],
   },
-  { title: "Wi-Fi (Qualcomm)", group: true, masterKey: "WIFI_QCOM_FIX",
-    masterLabel: "Fix Wi-Fi wakelock drain", masterDesc: "Patches WCNSS_qcom_cfg.ini via mount overlay, needs reboot - tap to choose which keys are written",
-    applyFns: ["tweak_wifi_qcom_fix"],
-    children: [
-      ["WIFI_KEY_ARP", "ARP offload off (hostArpOffload)", "Lets the Wi-Fi chip's firmware answer ARP requests on its own instead of waking the CPU for every one - the single biggest qcom_rx_wakelock reduction"],
-      ["WIFI_KEY_NS", "Neighbor Solicitation offload off (hostNsOffload)", "Same idea as ARP offload but for IPv6 Neighbor Discovery - wakes the CPU less on IPv6 networks"],
-      ["WIFI_KEY_WAKELOCK", "rx_wakelock_timeout = 0", "Stops the Wi-Fi driver from holding a wakelock after every received packet"],
-      ["WIFI_KEY_MCADDR", "Multicast address filtering", "gMCAddrListEnable - drops multicast traffic not explicitly subscribed to, less CPU wake for noisy LANs"],
-      ["WIFI_KEY_POWERSAVE", "Max power-save offload", "gEnablePowerSaveOffload = 5, hands more power-state decisions to the Wi-Fi firmware"],
-      ["WIFI_KEY_RUNTIMEPM", "Runtime power management", "gRuntimePM - lets the kernel suspend the Wi-Fi chip between bursts of traffic"],
-      ["WIFI_KEY_ROAM", "Roaming RSSI threshold", "RoamRssiDiff = 3 - requires a bigger signal gap before switching access points, fewer re-associations"],
-      ["WIFI_KEY_11D", "802.11d off", "g11dSupportEnabled - skips reading regulatory/country info from each AP on connect"],
-      ["WIFI_KEY_RTS", "RTS threshold raised", "RTSThreshold = 1048576 - effectively disables RTS/CTS handshaking on typical frame sizes"],
-      ["WIFI_KEY_SCANTIME", "Scan channel timing", "gActiveMaxChannelTime/gActiveMinChannelTime - shorter active-scan dwell time per channel"],
-      ["WIFI_KEY_SESSIONS", "Concurrent session limit", "gMaxConcurrentActiveSessions = 2"],
-    ],
-    standalone: [
-      ["WIFI_BAND_CAPABILITY", "Force Wi-Fi band", "Locks the radio to one band instead of switching automatically. Only applies while the fix above is on.", false, "select"],
-    ],
-  },
+  { title: "Wi-Fi (Qualcomm)", items: [
+    ["WIFI_QCOM_FIX", "Fix Wi-Fi wakelock drain", "Patches WCNSS_qcom_cfg.ini via mount overlay (ARP/NS offload, power-save, roaming, RTS, scan timing, session limit, wakelock timeout - applied together). Needs reboot."],
+  ]},
   { title: "System binaries (mount)", group: true, masterKey: "SYSBIN_MASTER",
     masterLabel: "System log/debug binary stubs", masterDesc: "Replaces /system/bin tools with no-ops via mount overlay, needs reboot - tap to choose which",
     applyFns: ["tweak_sysbin_stubs"],
@@ -119,7 +93,6 @@ const SECTIONS = [
 ];
 
 let state = {};
-let currentTab = "all";
 let currentQuery = "";
 let openSection = null;
 
@@ -157,11 +130,6 @@ function allItems() {
   return out;
 }
 
-function matchesTab(item) {
-  if (currentTab === "on") return item.type === "switch" && state[item.key] === "1";
-  if (currentTab === "risky") return item.risky;
-  return true;
-}
 function matchesQuery(item) {
   if (!currentQuery) return true;
   const q = currentQuery.toLowerCase();
@@ -173,8 +141,8 @@ function rowHtml(it) {
     '<div class="tweak-info"><span class="tweak-name">' + it.label + (it.risky ? '<span class="tweak-tag">risky</span>' : "") + "</span>" +
     (it.desc ? '<div class="tweak-desc">' + it.desc + "</div>" : "") + "</div>";
   if (it.type === "select") {
-    const opts = SELECT_OPTIONS[it.key] || [];
-    const cur = state[it.key] || opts[0].value;
+    const opts = it.options || [];
+    const cur = state[it.key] || (opts[0] ? opts[0].value : "");
     const btns = opts.map((o) => '<button class="' + (o.value === cur ? "active" : "") + '" data-key="' + it.key + '" data-value="' + o.value + '">' + o.label + "</button>").join("");
     return '<div class="tweak-row" data-key="' + it.key + '">' + infoHtml + '<div class="mini-select">' + btns + "</div></div>";
   }
@@ -184,11 +152,10 @@ function rowHtml(it) {
 
 function render() {
   const root = document.getElementById("tweakList");
-  const items = allItems().filter((it) => matchesTab(it) && matchesQuery(it));
-  document.getElementById("enabledCount").textContent = allItems().filter((it) => it.type === "switch" && state[it.key] === "1").length;
+  const items = allItems().filter((it) => matchesQuery(it));
 
   if (items.length === 0) {
-    root.innerHTML = '<div class="state-view"><div class="title">No matching tweaks</div><div class="subtitle">Try a different filter or search term</div></div>';
+    root.innerHTML = '<div class="state-view"><div class="title">No matching tweaks</div><div class="subtitle">Try a different search term</div></div>';
     return;
   }
 
@@ -207,7 +174,11 @@ function render() {
         '<div class="list-container"><div class="tweak-row master-row" data-group="' + s.title + '">' +
           '<div class="tweak-info"><span class="tweak-name">' + s.masterLabel + "</span>" +
           '<div class="tweak-desc">' + s.masterDesc + "</div></div>" +
-          '<div class="switch' + (masterOn ? " on" : "") + '" data-key="' + s.masterKey + '"><div class="thumb"></div></div>' +
+          '<div class="li-toggle-action">' +
+            '<svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>' +
+            '<div class="li-config-divider" aria-hidden="true"></div>' +
+            '<div class="switch' + (masterOn ? " on" : "") + '" data-key="' + s.masterKey + '"><div class="thumb"></div></div>' +
+          "</div>" +
         "</div></div>"
       );
       const standaloneItems = present.filter((it) => (s.standalone || []).some((x) => x[0] === it.key));
@@ -219,7 +190,10 @@ function render() {
   root.innerHTML = html.join("");
 
   root.querySelectorAll(".master-row").forEach((row) => {
-    row.addEventListener("click", () => openSubpage(SECTIONS.find((s) => s.title === row.getAttribute("data-group"))));
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".switch")) return; // switch has its own handler below
+      openSubpage(SECTIONS.find((s) => s.title === row.getAttribute("data-group")));
+    });
   });
   root.querySelectorAll(".switch[data-key]").forEach((sw) => {
     sw.addEventListener("click", (e) => { e.stopPropagation(); const k = sw.getAttribute("data-key"); setKey(k, state[k] === "1" ? "0" : "1"); });
@@ -315,21 +289,39 @@ async function restoreDefaults() {
   if (r.errno === 0) { state = { ...DEFAULTS }; render(); showSnackbar("Defaults restored"); }
   else showSnackbar("Error: " + r.stderr);
 }
-async function showLog() {
+
+//////////////////////////////////////////////////////////////////////////
+// Log tab: tail the log, filter by level (INFO/WARN/ERROR), copy, refresh.
+//////////////////////////////////////////////////////////////////////////
+
+let rawLogLines = [];
+let currentLogFilter = "ALL";
+
+function renderLogLines() {
   const box = document.getElementById("logbox");
-  const r = await execCommand("tail -n 150 " + LOGFILE);
-  box.textContent = r.stdout || r.stderr || "(empty)";
+  const filtered = currentLogFilter === "ALL"
+    ? rawLogLines
+    : rawLogLines.filter((l) => l.indexOf("[" + currentLogFilter + "]") !== -1);
+  if (!filtered.length) { box.textContent = "(no " + (currentLogFilter === "ALL" ? "" : currentLogFilter.toLowerCase() + " ") + "log lines)"; return; }
+  box.innerHTML = filtered.map((line) => {
+    const level = line.indexOf("[ERROR]") !== -1 ? "ERROR" : line.indexOf("[WARN]") !== -1 ? "WARN" : "";
+    const esc = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return level ? '<div class="log-line--' + level + '">' + esc + "</div>" : "<div>" + esc + "</div>";
+  }).join("");
+}
+
+async function showLog() {
+  const r = await execCommand("tail -n 300 " + LOGFILE);
+  rawLogLines = (r.stdout || r.stderr || "").split("\n").filter((l) => l.length);
+  renderLogLines();
 }
 
 async function copyLog() {
-  const box = document.getElementById("logbox");
-  const text = box.textContent || "";
+  const text = rawLogLines.join("\n");
   try {
     await navigator.clipboard.writeText(text);
     showSnackbar("Log copied");
   } catch (e) {
-    // Clipboard API can be unavailable in a WebView - fall back to a
-    // hidden textarea + execCommand("copy").
     const ta = document.createElement("textarea");
     ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
     document.body.appendChild(ta); ta.focus(); ta.select();
@@ -339,12 +331,26 @@ async function copyLog() {
   }
 }
 
-// Nav bar - same reposition()-the-single-indicator approach as Specter's
-// own navigation.ts, trimmed down to 2 tabs and plain show/hide panels
-// (no swipe-track - just the tab bar itself).
+document.querySelectorAll(".log-filter").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".log-filter").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentLogFilter = btn.getAttribute("data-level");
+    renderLogLines();
+  });
+});
+
+//////////////////////////////////////////////////////////////////////////
+// Nav bar + sliding #pages track - same mechanism as Specter's own
+// navigation.ts (single indicator reposition + translate3d page slide),
+// trimmed to 2 tabs and no swipe gesture.
+//////////////////////////////////////////////////////////////////////////
+
 function wireNavBar() {
   const navTabs = Array.from(document.querySelectorAll(".nav-tab"));
   const indicator = document.getElementById("nav-indicator");
+  const track = document.getElementById("pages");
+  const panelNames = ["tweaks", "log"];
 
   function reposition(tab) {
     indicator.style.left = tab.offsetLeft + "px";
@@ -352,9 +358,14 @@ function wireNavBar() {
   }
 
   function switchPanel(name) {
+    const idx = panelNames.indexOf(name);
+    if (idx === -1) return;
     const tab = navTabs.find((t) => t.getAttribute("data-panel") === name);
     if (!tab) return;
-    document.querySelectorAll(".panel").forEach((p) => { p.style.display = p.id === "panel-" + name ? "" : "none"; });
+
+    track.style.transition = "transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+    track.style.transform = "translate3d(-" + (idx * 50) + "%, 0, 0)";
+
     navTabs.forEach((t) => {
       t.classList.toggle("nav-tab--active", t === tab);
       t.querySelector(".nav-icon").classList.toggle("nav-icon--filled", t === tab);
@@ -369,25 +380,33 @@ function wireNavBar() {
     if (active) reposition(active);
   });
 
-  // Indicator starts invisible (0-width) until layout is ready, same as
-  // Specter's requestAnimationFrame(() => reposition(homeTab)) on load.
   requestAnimationFrame(() => {
     const active = document.querySelector(".nav-tab--active");
     if (active) reposition(active);
   });
 }
 
+// Search bar collapses out of the way on scroll-down, reappears on
+// scroll-up - the only "top bar" left, and it was eating too much of a
+// phone screen staying pinned open while scrolling a long tweak list.
+function wireScrollCollapse() {
+  const panel = document.getElementById("panel-tweaks");
+  const wrap = document.getElementById("searchBarWrap");
+  let lastY = 0;
+  panel.addEventListener("scroll", () => {
+    const y = panel.scrollTop;
+    if (y > lastY && y > 40) wrap.classList.add("collapsed");
+    else wrap.classList.remove("collapsed");
+    lastY = y;
+  }, { passive: true });
+}
+
 document.getElementById("searchInput").addEventListener("input", (e) => { currentQuery = e.target.value; render(); });
-document.querySelectorAll(".segmented button").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".segmented button").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active"); currentTab = btn.getAttribute("data-tab"); render();
-  });
-});
 document.getElementById("btnApply").addEventListener("click", applyNow);
 document.getElementById("btnDefaults").addEventListener("click", restoreDefaults);
 document.getElementById("btnRefreshLog").addEventListener("click", showLog);
 document.getElementById("btnCopyLog").addEventListener("click", copyLog);
 wireNavBar();
+wireScrollCollapse();
 
 loadState();

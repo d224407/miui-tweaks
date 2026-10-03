@@ -8,49 +8,50 @@
 </head>
 <body>
 
-<div class="panel" id="panel-tweaks" style="padding-top:calc(16px + env(safe-area-inset-top,0px))">
-  <div class="stat-card">
-    <span class="label">Enabled</span>
-    <span class="value" id="enabledCount">0</span>
-  </div>
-
-  <div class="search-bar">
-    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
-    <input type="text" id="searchInput" placeholder="Search tweaks">
-  </div>
-
-  <div class="segmented">
-    <button class="active" data-tab="all">All</button>
-    <button data-tab="on">Enabled</button>
-    <button data-tab="risky">Risky</button>
-  </div>
-
-  <div class="scroll-area" id="tweakList">
-    <div class="state-view">
-      <div class="spinner"></div>
-      <div class="title">Loading</div>
+<div id="pages">
+  <div class="panel" id="panel-tweaks">
+    <div class="search-bar-wrap" id="searchBarWrap">
+      <div class="search-bar">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+        <input type="text" id="searchInput" placeholder="Search tweaks">
+      </div>
+    </div>
+    <div class="panel-inner">
+      <div id="tweakList">
+        <div class="state-view">
+          <div class="spinner"></div>
+          <div class="title">Loading</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="btn" id="btnDefaults">Restore defaults</button>
+        <button class="btn primary" id="btnApply">Apply now</button>
+      </div>
     </div>
   </div>
 
-  <div class="action-row">
-    <button class="btn" id="btnDefaults">Restore defaults</button>
-    <button class="btn primary" id="btnApply">Apply now</button>
-  </div>
-</div>
-
-<div class="panel" id="panel-log" style="display:none; padding-top:calc(16px + env(safe-area-inset-top,0px))">
-  <div class="log-header">
-    <span class="log-title">Log</span>
-    <div class="log-actions">
-      <button class="icon-btn" id="btnRefreshLog" aria-label="Refresh">
-        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 19.73 13h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-      </button>
-      <button class="icon-btn" id="btnCopyLog" aria-label="Copy log">
-        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
-      </button>
+  <div class="panel" id="panel-log">
+    <div class="panel-inner" style="padding-top:calc(16px + env(safe-area-inset-top,0px))">
+      <div class="log-header">
+        <span class="log-title">Log</span>
+        <div class="log-actions">
+          <button class="icon-btn" id="btnRefreshLog" aria-label="Refresh">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 19.73 13h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          </button>
+          <button class="icon-btn" id="btnCopyLog" aria-label="Copy log">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="log-filters">
+        <button class="log-filter active" data-level="ALL">All</button>
+        <button class="log-filter" data-level="ERROR">Error</button>
+        <button class="log-filter" data-level="WARN">Warning</button>
+        <button class="log-filter" data-level="INFO">Info</button>
+      </div>
+      <pre class="logbox" id="logbox">(loading...)</pre>
     </div>
   </div>
-  <pre class="logbox" id="logbox">(loading...)</pre>
 </div>
 
 <nav id="nav-bar" class="nav-bar" role="navigation" aria-label="Main navigation">
