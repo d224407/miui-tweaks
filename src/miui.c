@@ -159,7 +159,6 @@ int main(int argc, char **argv) {
       cmd5("settings", "put", "system", "anr_debugging_mechanism", "0");
       cmd2("looper_stats", "disable");
       cmd5("settings", "put", "global", "netstats_enabled", "0");
-      cmd4("device_config", "put", "runtime_native_boot", "disable_lock_profiling"); /* value appended next line */
       { char *a[] = {(char*)"/system/bin/cmd",(char*)"device_config",(char*)"put",(char*)"runtime_native_boot",(char*)"disable_lock_profiling",(char*)"true",NULL}; mt_run(a,1); }
       { char *a[] = {(char*)"/system/bin/cmd",(char*)"device_config",(char*)"put",(char*)"runtime_native_boot",(char*)"iorap_readahead_enable",(char*)"true",NULL}; mt_run(a,1); }
       { char *a[] = {(char*)"/system/bin/cmd",(char*)"settings",(char*)"put",(char*)"global",(char*)"fstrim_mandatory_interval",(char*)"3600",NULL}; mt_run(a,1); }

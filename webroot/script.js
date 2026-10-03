@@ -319,7 +319,62 @@ async function showLog() {
   const box = document.getElementById("logbox");
   const r = await execCommand("tail -n 150 " + LOGFILE);
   box.textContent = r.stdout || r.stderr || "(empty)";
-  box.style.display = "block";
+}
+
+async function copyLog() {
+  const box = document.getElementById("logbox");
+  const text = box.textContent || "";
+  try {
+    await navigator.clipboard.writeText(text);
+    showSnackbar("Log copied");
+  } catch (e) {
+    // Clipboard API can be unavailable in a WebView - fall back to a
+    // hidden textarea + execCommand("copy").
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand("copy"); showSnackbar("Log copied"); }
+    catch (e2) { showSnackbar("Could not copy log"); }
+    document.body.removeChild(ta);
+  }
+}
+
+// Nav bar - same reposition()-the-single-indicator approach as Specter's
+// own navigation.ts, trimmed down to 2 tabs and plain show/hide panels
+// (no swipe-track - just the tab bar itself).
+function wireNavBar() {
+  const navTabs = Array.from(document.querySelectorAll(".nav-tab"));
+  const indicator = document.getElementById("nav-indicator");
+
+  function reposition(tab) {
+    indicator.style.left = tab.offsetLeft + "px";
+    indicator.style.width = tab.offsetWidth + "px";
+  }
+
+  function switchPanel(name) {
+    const tab = navTabs.find((t) => t.getAttribute("data-panel") === name);
+    if (!tab) return;
+    document.querySelectorAll(".panel").forEach((p) => { p.style.display = p.id === "panel-" + name ? "" : "none"; });
+    navTabs.forEach((t) => {
+      t.classList.toggle("nav-tab--active", t === tab);
+      t.querySelector(".nav-icon").classList.toggle("nav-icon--filled", t === tab);
+    });
+    reposition(tab);
+    if (name === "log") showLog();
+  }
+
+  navTabs.forEach((tab) => tab.addEventListener("click", () => switchPanel(tab.getAttribute("data-panel"))));
+  window.addEventListener("resize", () => {
+    const active = document.querySelector(".nav-tab--active");
+    if (active) reposition(active);
+  });
+
+  // Indicator starts invisible (0-width) until layout is ready, same as
+  // Specter's requestAnimationFrame(() => reposition(homeTab)) on load.
+  requestAnimationFrame(() => {
+    const active = document.querySelector(".nav-tab--active");
+    if (active) reposition(active);
+  });
 }
 
 document.getElementById("searchInput").addEventListener("input", (e) => { currentQuery = e.target.value; render(); });
@@ -331,6 +386,8 @@ document.querySelectorAll(".segmented button").forEach((btn) => {
 });
 document.getElementById("btnApply").addEventListener("click", applyNow);
 document.getElementById("btnDefaults").addEventListener("click", restoreDefaults);
-document.getElementById("btnLog").addEventListener("click", showLog);
+document.getElementById("btnRefreshLog").addEventListener("click", showLog);
+document.getElementById("btnCopyLog").addEventListener("click", copyLog);
+wireNavBar();
 
 loadState();
