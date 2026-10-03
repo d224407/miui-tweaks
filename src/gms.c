@@ -1,6 +1,4 @@
-/* gms.c - GMS service categories, DroidGuard, GMS logging keys.
- * Usage: gms <conf> <track> <gmslist> early|late|set <KEY> <VALUE>|category <CAT> <VALUE>
- */
+
 #include "common.h"
 
 static const char *CATEGORY_CONF_KEY(const char *cat) {
@@ -14,7 +12,7 @@ static const char *CATEGORY_CONF_KEY(const char *cat) {
     {NULL,NULL}
   };
   for (int i = 0; map[i].cat; i++) if (strcmp(map[i].cat, cat) == 0) return map[i].key;
-  return NULL; /* core/essential/unknown -> never disabled */
+  return NULL; 
 }
 
 static int gms_should_disable(const char *conf, const char *cat) {
@@ -28,9 +26,7 @@ static void pm_toggle(const char *svc, int disable) {
   mt_run(argv, 1);
 }
 
-/* Walks gmslist.txt ("service|category" lines, '#' comments, blanks
- * skipped). filter_cat == NULL means "every line"; otherwise only lines
- * matching that one category (used by the per-category WebUI toggle). */
+
 static int walk_gmslist(const char *path, const char *conf, const char *filter_cat, int force_enable_all) {
   FILE *f = fopen(path, "r");
   if (!f) { mt_log(3, "gms: gmslist not found at %s", path); return 0; }
@@ -98,10 +94,9 @@ static void gms_log_revert(void) {
 int main(int argc, char **argv) {
   if (argc < 5) { fprintf(stderr, "usage: gms <conf> <track> <gmslist> early|late|set KEY VALUE|category CAT VALUE\n"); return 2; }
   const char *conf = argv[1], *gmslist = argv[3], *mode = argv[4];
-  /* argv[2] (track) is unused here - GMS has nothing to roll back via
-     resetprop, only pm disable/enable, which is self-reverting. */
+  
 
-  if (strcmp(mode, "early") == 0) return 0; /* GMS tweaks are late-stage only */
+  if (strcmp(mode, "early") == 0) return 0; 
 
   if (strcmp(mode, "late") == 0) {
     if (mt_is_on(conf, "GMS_MASTER")) {
@@ -109,7 +104,7 @@ int main(int argc, char **argv) {
       if (fail) mt_log(3, "gms_services: %d service(s) failed to apply", fail);
       mt_log(1, "gms_services: applied per category config");
     } else {
-      walk_gmslist(gmslist, conf, NULL, 1); /* re-enable everything */
+      walk_gmslist(gmslist, conf, NULL, 1); 
     }
     if (mt_is_on(conf, "DISABLE_DROIDGUARD")) droidguard(1);
     if (mt_is_on(conf, "GMS_LOG_DISABLE")) gms_log_apply();

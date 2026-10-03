@@ -1,5 +1,4 @@
-/* Color tokens - the exact "blue" preset values from Specter's own
-   js/presets.json (blue_light / blue_dark), not approximated. */
+
 :root {
   --md-sys-color-primary: #495d92;
   --md-sys-color-on-primary: #ffffff;
@@ -43,17 +42,14 @@
   }
 }
 
-/* JetBrains Mono Variable - bundled (OFL licensed, safe to ship). */
+
 @font-face {
   font-family: "JetBrains Mono Variable";
   src: url("fonts/JetBrainsMono-var.woff2") format("woff2-variations");
   font-weight: 1 1000;
   font-stretch: 1 100;
 }
-/* Material Icons - bundled straight from Specter's own repo (Apache 2.0,
-   safe to ship). Its "outlined" file is a byte-identical placeholder in
-   the copy we were given, so the outline/fill swap is wired up correctly
-   but looks the same until a real outlined font replaces that file. */
+
 @font-face { font-family: 'Material Icons'; font-style: normal; font-weight: 400; src: url('fonts/material-icons.woff2') format('woff2'); }
 @font-face { font-family: 'Material Icons Outlined'; font-style: normal; font-weight: 400; src: url('fonts/material-icons-outlined.woff2') format('woff2'); }
 
@@ -67,9 +63,7 @@ body {
   user-select: none;
 }
 
-/* --- Sliding page track, same mechanism as Specter's #pages/navigation.ts
-   (translate3d, 320ms cubic-bezier(0.2,0.8,0.2,1)) - JS drives the
-   transform, this just sets up the flex row and sizing. */
+
 #pages {
   display: flex;
   width: 200%;
@@ -86,9 +80,7 @@ body {
 }
 .panel-inner { padding: 0 16px calc(96px + env(safe-area-inset-bottom,0px)); flex: 1; }
 
-/* Search bar doubles as the page's only top bar - collapses out of the
-   way on scroll-down since there's no room to spare on a phone screen,
-   reappears on scroll-up. */
+
 .search-bar-wrap {
   position: sticky; top: 0; z-index: 50;
   background: var(--md-sys-color-surface);
@@ -108,9 +100,7 @@ body {
 .search-bar input { flex: 1; border: none; outline: none; background: transparent; font-size: 16px; color: var(--md-sys-color-on-surface); font-family: inherit; }
 .search-bar input::placeholder { color: var(--md-sys-color-on-surface-variant); }
 
-/* Grouped "list-container" of pill-edged rows, same corner technique as
-   Specter: full pill if alone, 24/24/4/4 top, 4px square middle rows,
-   4/4/24/24 bottom. */
+
 .list-title { font-size: 13px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--md-sys-color-primary); margin: 20px 4px 8px; }
 .list-container { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
 
@@ -145,8 +135,7 @@ body {
   vertical-align: middle;
 }
 
-/* --- Switch - M3 proportions (52x32 track / 24px thumb when on),
-   matching the real <md-switch> component Specter uses. */
+
 .switch {
   position: relative;
   width: 52px;
@@ -170,10 +159,7 @@ body {
   background: var(--md-sys-color-on-primary); transform: translateY(-50%);
 }
 
-/* --- Master/group row that opens a bulk-config subpage: chevron + a
-   straight 1px divider + switch, copied from Specter's own
-   .li-toggle-action/.li-config-chevron/.li-config-divider - no rounded
-   popup chrome, just this. */
+
 .li-toggle-action { display: flex; align-items: center; gap: 14px; flex-shrink: 0; margin-left: auto; color: var(--md-sys-color-on-surface-variant); }
 .li-config-chevron { width: 8px; height: 14px; color: inherit; opacity: .65; flex-shrink: 0; }
 .li-config-divider { width: 1px; height: 32px; background-color: currentColor; opacity: .3; flex-shrink: 0; }
@@ -215,7 +201,7 @@ body {
 .master-row { cursor: pointer; }
 .master-row .switch { cursor: pointer; }
 
-/* --- Subpage overlay (bulk-config screens) --- */
+
 .subpage-overlay {
   position: fixed; inset: 0; z-index: 1100;
   background: var(--md-sys-color-surface);
@@ -241,7 +227,7 @@ body {
 .subpage-content { flex: 1; overflow-y: auto; padding: 0 16px calc(24px + env(safe-area-inset-bottom,0px)); }
 .subpage-bulk-row { display: flex; gap: 10px; margin-bottom: 14px; }
 
-/* --- Log panel: fills the full page, filter chips, copy/refresh --- */
+
 #panel-log .panel-inner { display: flex; flex-direction: column; padding-bottom: calc(16px + env(safe-area-inset-bottom,0px)); height: 100%; }
 .log-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 10px; flex-shrink: 0; }
 .log-title { font-size: 21px; font-weight: 500; color: var(--md-sys-color-on-surface); }
@@ -283,9 +269,7 @@ body {
 .log-line--ERROR { color: var(--md-sys-color-error-container, #ffb4ab); }
 .log-line--WARN { color: #e5a94d; }
 
-/* --- Floating navigation bar - copied verbatim from Specter's own
-   .nav-bar/.nav-indicator/.nav-tab rules (src/webroot/css/app.css),
-   only renamed data-page -> data-panel to match this module's two tabs. */
+
 .nav-bar {
   position: fixed;
   bottom: 16px;

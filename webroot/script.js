@@ -191,7 +191,7 @@ function render() {
 
   root.querySelectorAll(".master-row").forEach((row) => {
     row.addEventListener("click", (e) => {
-      if (e.target.closest(".switch")) return; // switch has its own handler below
+      if (e.target.closest(".switch")) return; 
       openSubpage(SECTIONS.find((s) => s.title === row.getAttribute("data-group")));
     });
   });
@@ -229,11 +229,11 @@ async function setKey(key, val) {
   showSnackbar(r.errno === 0 ? key + " " + (val === "1" ? "applied" : "reverted") : "Error: " + r.stderr);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// Subpage: bulk config for a group's children. Master switch is handled
-// entirely by setKey() above and never touches children; this subpage
-// never touches the master key.
-//////////////////////////////////////////////////////////////////////////
+
+
+
+
+
 
 function renderSubpageChildren(section) {
   const content = document.getElementById("subpageContent");
@@ -290,9 +290,9 @@ async function restoreDefaults() {
   else showSnackbar("Error: " + r.stderr);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// Log tab: tail the log, filter by level (INFO/WARN/ERROR), copy, refresh.
-//////////////////////////////////////////////////////////////////////////
+
+
+
 
 let rawLogLines = [];
 let currentLogFilter = "ALL";
@@ -340,11 +340,11 @@ document.querySelectorAll(".log-filter").forEach((btn) => {
   });
 });
 
-//////////////////////////////////////////////////////////////////////////
-// Nav bar + sliding #pages track - same mechanism as Specter's own
-// navigation.ts (single indicator reposition + translate3d page slide),
-// trimmed to 2 tabs and no swipe gesture.
-//////////////////////////////////////////////////////////////////////////
+
+
+
+
+
 
 function wireNavBar() {
   const navTabs = Array.from(document.querySelectorAll(".nav-tab"));
@@ -386,9 +386,9 @@ function wireNavBar() {
   });
 }
 
-// Search bar collapses out of the way on scroll-down, reappears on
-// scroll-up - the only "top bar" left, and it was eating too much of a
-// phone screen staying pinned open while scrolling a long tweak list.
+
+
+
 function wireScrollCollapse() {
   const panel = document.getElementById("panel-tweaks");
   const wrap = document.getElementById("searchBarWrap");

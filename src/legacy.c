@@ -1,6 +1,4 @@
-/* legacy.c - GhostGMS Legacy 1.3/2.0 deep prop set.
- * Usage: legacy <conf> <track> early|late|set LEGACY_MODE <VALUE>
- */
+
 #include "common.h"
 
 static const char *PROPS[][2] = {
@@ -37,9 +35,7 @@ static const char *PROPS[][2] = {
   {"vendor.fm.a2dp.conc.disabled","true"},{"vendor.vidc.enc.disable_bframes","1"},
   {"video.disable.ubwc","1"}, {NULL,NULL}
 };
-/* persist.ims.disabled and wifi.interface=wlan0 from the source module are
- * intentionally left out, same as the shell version - the first disables
- * VoLTE/VoWiFi calling, the second is known to bootloop some ROMs. */
+
 
 static void apply(const char *track) {
   int n = 0;

@@ -1,12 +1,4 @@
-/* miui.c - MIUI service/prop/misc tweaks.
- * Usage: miui <conf> <track> early|late|set <KEY> <VALUE>
- *   early -> sys_log_props, sys_dalvik_props
- *   late  -> miui_services, misc_kill, cpu_core_hardcode, fixed_perf_mode,
- *            thermal_override, packages_dexopt, cmd_misc
- *   set   -> apply/revert exactly one key (used by the WebUI toggle)
- * cpu_pin is NOT handled here - it needs live /proc process scanning and
- * stays in common/tweaks-miui.sh (engine.sh still calls it directly).
- */
+
 #include "common.h"
 
 static const char *MIUI_SERVICE_LIST[] = {
@@ -72,7 +64,7 @@ static void misc_kill_revert(void) {
   mt_log(1, "misc_kill_services: reverted (best effort - some restart via init automatically)");
 }
 
-/* name,value pairs for the two big prop blocks */
+
 static const char *LOG_PROPS[][2] = {
   {"vidc.debug.level","0"},{"vendor.vidc.debug.level","0"},{"vendor.swvdec.log.level","0"},
   {"persist.vendor.dpm.loglevel","0"},{"persist.vendor.dpmhalservice.loglevel","0"},
@@ -183,7 +175,7 @@ int main(int argc, char **argv) {
     }
     else if (strcmp(key, "FIXED_PERF_MODE") == 0) cmd3("power", "set-fixed-performance-mode-enabled", on ? "true" : "false");
     else if (strcmp(key, "THERMAL_OVERRIDE") == 0) { if (on) cmd3("thermalservice", "override-status", "0"); else cmd2("thermalservice", "reset"); }
-    else if (strcmp(key, "PACKAGES_DEXOPT") == 0) { if (on) packages_dexopt(); /* one-shot, nothing to revert */ }
+    else if (strcmp(key, "PACKAGES_DEXOPT") == 0) { if (on) packages_dexopt();  }
     else if (strcmp(key, "CMD_MISC") == 0) {
       if (on) {
         { char *a[] = {(char*)"/system/bin/cmd",(char*)"settings",(char*)"put",(char*)"system",(char*)"anr_debugging_mechanism",(char*)"0",NULL}; mt_run(a,1); }

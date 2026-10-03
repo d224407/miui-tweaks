@@ -1,6 +1,3 @@
-##############################################################################
-# MIUI Tweaks - installer
-##############################################################################
 SKIPUNZIP=0
 SKIPMOUNT=false
 
@@ -8,12 +5,6 @@ set_permissions() {
   set_perm_recursive "$MODPATH" 0 0 0755 0755
 }
 
-##############################################################################
-# Preserve an existing config on reinstall/update.
-# Only carries over values for keys that already exist; new keys shipped
-# in this version keep their default, nothing in the old file is dropped
-# from the check even if this version no longer ships that key.
-##############################################################################
 merge_old_config() {
   local new="$MODPATH/config/tweaks.conf"
   local old=""
@@ -27,7 +18,7 @@ merge_old_config() {
 
   ui_print "- Existing config found, keeping your tweak settings"
   while IFS='=' read -r key val; do
-    case "$key" in ''|'#'*) continue ;; esac
+    case "$key" in ''|'#'*|*[!A-Za-z0-9_]*) continue ;; esac
     [ -n "$key" ] || continue
     grep -q "^$key=" "$new" && sed -i "s|^$key=.*|$key=$val|" "$new"
   done < "$old"
@@ -58,8 +49,6 @@ if [ -n "$ARCH_SUFFIX" ]; then
       MISSING=1
     fi
   done
-  # The zip ships all 4 ABIs so it works on any device - only this one's
-  # binaries are kept on disk, the rest are deleted right after install.
   rm -f "$MODPATH"/system/bin/*_32 "$MODPATH"/system/bin/*_64 "$MODPATH"/system/bin/*_x86 "$MODPATH"/system/bin/*_x64
   if [ "$MISSING" = 1 ]; then
     ui_print "  WARNING: some binaries for this ABI ($ARCH_SUFFIX) were missing from this zip"

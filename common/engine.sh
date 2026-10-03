@@ -1,9 +1,4 @@
 #!/system/bin/sh
-# MIUI Tweaks - engine
-# Tweak logic now lives in compiled C binaries under system/bin/ (src/*.c
-# in the repo) - this file just loads config, logs, and dispatches to the
-# right binary for the current ABI. Only cpu_pin stays here: it needs live
-# /proc process scanning tied to this shell's ps/awk-based helpers below.
 
 CONF="$MODDIR/config/tweaks.conf"
 LOGFILE="/storage/emulated/0/Android/miui_tweaks.log"
@@ -17,7 +12,6 @@ load_conf() {
 }
 
 log() {
-  # $1=level(1 info/2 warn/3 error) $2=message
   local t=""
   case "$1" in
     1) t="INFO" ;; 2) t="WARN" ;; 3) t="ERROR" ;; *) t="?" ;;
@@ -39,7 +33,6 @@ resetprop_bin() {
 }
 
 run_tool() {
-  # $1 = tool name, rest = its argv (after conf+track, which we fill in)
   local tool="$1"; shift
   local p="$(bin_path "$tool")"
   if [ -z "$p" ]; then
@@ -54,7 +47,6 @@ terminate_service() {
   stop "$1" 2>/dev/null
 }
 
-# CPU / cgroup helpers (cpu_pin only - the rest moved into the C binaries)
 
 ps_ret=""
 rebuild_process_scan_cache() { ps_ret="$(ps -Ao pid,args)"; }
@@ -127,13 +119,10 @@ revert_cpu_pin() {
   log 1 "cpu_pin: reverted (nice reset to 0, cgroup normalizes on next app switch)"
 }
 
-# Single-tweak dispatch - used by the WebUI so flipping one switch applies
-# only that tweak, instantly.
 
 GMS_CATEGORY_KEYS="DISABLE_ADS:ads DISABLE_TRACKING:tracking DISABLE_ANALYTICS:analytics DISABLE_REPORTING:reporting DISABLE_BACKGROUND:background DISABLE_UPDATE:update DISABLE_LOCATION:location DISABLE_GEOFENCE:geofence DISABLE_NEARBY:nearby DISABLE_CAST:cast DISABLE_DISCOVERY:discovery DISABLE_SYNC:sync DISABLE_CLOUD:cloud DISABLE_AUTH:auth DISABLE_WALLET:wallet DISABLE_PAYMENT:payment DISABLE_WEAR:wear DISABLE_FITNESS:fitness"
 
 run_single() {
-  # $1 = config key, $2 = new value ("0" or "1")
   load_conf
   local key="$1" val="$2"
 
@@ -164,10 +153,8 @@ run_single() {
   return 0
 }
 
-# Entry points
 
 apply_early() {
-  # Runs at post-fs-data: properties only (fast, no wait for boot)
   load_conf
   run_tool shared early
   run_tool miui early
@@ -177,9 +164,6 @@ apply_early() {
 }
 
 apply_late() {
-  # Runs at late boot: services, GMS categories, CPU, dexopt. Also called
-  # again by service.sh's package-change watcher whenever an app gets
-  # installed, removed, updated, enabled or disabled.
   load_conf
   log 1 "[START] apply_late"
   run_tool miui late

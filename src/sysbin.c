@@ -1,8 +1,4 @@
-/* sysbin.c - no-op stub binaries for MIUI_TWEAKS_SYSBIN groups.
- * Usage: sysbin <conf> <track> <moddir> early|late|set <KEY> <VALUE>
- * <track> is unused (nothing here is a resetprop) but kept for a
- * consistent argv shape across every tool.
- */
+
 #include "common.h"
 #include <dirent.h>
 #include <limits.h>
@@ -66,7 +62,7 @@ static void apply_all(const char *conf, const char *moddir) {
     }
   }
   if (dir_has_files(bindir)) mt_log(1, "sysbin_stubs: applied (reboot to take effect)");
-  rmdir(bindir); /* no-op if it still has files */
+  rmdir(bindir); 
 }
 
 int main(int argc, char **argv) {

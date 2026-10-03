@@ -1,8 +1,4 @@
 #!/system/bin/sh
-##############################################################################
-# MIUI Tweaks - late boot stage (services, CPU, dexopt)
-# Waits for boot_completed + first unlock before writing to /storage.
-##############################################################################
 MODDIR="${0%/*}"
 . "$MODDIR/common/load.sh"
 
@@ -17,14 +13,6 @@ wait_until_login
 sleep 30
 apply_late
 
-##############################################################################
-# Package-change watcher: re-applies GMS/MIUI service tweaks whenever an app
-# gets installed, removed, updated, or its enabled/disabled state changes
-# (common after a GMS self-update silently re-enables something). There is
-# no broadcast receiver without an APK, so this polls a hash of the
-# package + enabled-state listing instead - cheap (two `pm list` calls) and
-# only acts when something actually changed.
-##############################################################################
 PKG_HASH_FILE="$MODDIR/config/.pkg_hash"
 PKG_POLL_INTERVAL=20
 

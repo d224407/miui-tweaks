@@ -1,8 +1,4 @@
-/* shared.c - low-level prop tweaks shared by MIUI + GMS.
- * Usage: shared <conf> <track> early|late|set <KEY> <VALUE>
- * All three tweaks here are prop-only and safe at early boot, so "early"
- * and "late" both apply them (matches apply_early calling them today).
- */
+
 #include "common.h"
 
 static void apply_lmk(const char *track, int on) {

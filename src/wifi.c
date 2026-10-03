@@ -1,8 +1,4 @@
-/* wifi.c - Qualcomm WCNSS_qcom_cfg.ini overlay patcher.
- * Usage: wifi <conf> <track> <moddir> early|late|set <KEY> <VALUE>
- * <track> is unused (nothing here is a resetprop) but kept for a
- * consistent argv shape across every tool.
- */
+
 #define _GNU_SOURCE
 #include "common.h"
 #include <ftw.h>
@@ -26,9 +22,7 @@ static int ftw_cb(const char *path, const struct stat *sb, int typeflag, struct 
   return 0;
 }
 
-/* Mirrors wifi_find_cfg(): cached in g_cache if present, else an
- * FTW_PHYS (no symlink following, matching the shell's `-L` skip) walk
- * of /system and /vendor. */
+
 static void find_cfg(void) {
   FILE *cf = fopen(g_cache, "r");
   if (cf) {
@@ -49,7 +43,7 @@ static void find_cfg(void) {
   }
 }
 
-/* Mirrors wifi_overlay_path(): /vendor/x -> $MODDIR/system/vendor/x, else $MODDIR/x */
+
 static void overlay_path(const char *src, char *out, size_t outlen) {
   if (strncmp(src, "/vendor/", 8) == 0) snprintf(out, outlen, "%s/system%s", g_moddir, src);
   else snprintf(out, outlen, "%s%s", g_moddir, src);
@@ -77,9 +71,7 @@ static int copy_file(const char *src, const char *dst) {
   return 0;
 }
 
-/* Same algorithm as the shell wifi_set_key(): replace if the key exists;
- * else insert right before a bare "END" line (the parser stops reading
- * there); else just append. */
+
 static void set_key(const char *path, const char *key, const char *value) {
   FILE *in = fopen(path, "r");
   if (!in) { mt_log(3, "wifi_qcom_fix: cannot open %s to set %s", path, key); return; }
@@ -93,7 +85,7 @@ static void set_key(const char *path, const char *key, const char *value) {
   int replaced = 0, inserted_before_end = 0;
   long end_line_pos_in_out = -1;
 
-  /* First pass: replace in place if present. */
+  
   while (fgets(line, sizeof(line), in)) {
     char *p = line;
     while (*p == ' ' || *p == '\t') p++;
@@ -101,8 +93,7 @@ static void set_key(const char *path, const char *key, const char *value) {
       fprintf(out, "%s=%s\n", key, value);
       replaced = 1;
     } else {
-      /* Detect a bare END line to insert before, if we still haven't
-         replaced anything by the time we reach it. */
+      
       char trimmed[MT_LINE_MAX];
       size_t n = strcspn(line, "\r\n");
       memcpy(trimmed, line, n); trimmed[n] = '\0';
@@ -126,7 +117,7 @@ static void set_key(const char *path, const char *key, const char *value) {
 }
 
 static void patch_one(const char *conf, const char *cfg, int enable) {
-  (void)conf; /* no longer needed - every key below is unconditional now */
+  (void)conf; 
   char dst[PATH_MAX];
   overlay_path(cfg, dst, sizeof(dst));
 
@@ -162,8 +153,7 @@ static void patch_one(const char *conf, const char *cfg, int enable) {
 
   chmod(dst, 0644);
   if (stat(src, &st) == 0) chown(dst, st.st_uid, st.st_gid);
-  /* SELinux context copy has no simple libc call - shell out to chcon,
-     same as the original script did. */
+  
   char *a1[] = { (char *)"/system/bin/chcon", (char *)"--reference", (char *)src, (char *)dst, NULL };
   if (mt_run(a1, 1) != 0) {
     char *a2[] = { (char *)"/system/bin/chcon", (char *)"u:object_r:vendor_configs_file:s0", (char *)dst, NULL };
@@ -175,7 +165,7 @@ static void patch_one(const char *conf, const char *cfg, int enable) {
 static void run_wifi_fix(const char *conf) {
   int enable = mt_is_on(conf, "WIFI_QCOM_FIX");
   struct stat st;
-  if (!enable && stat(g_cache, &st) != 0) return; /* never applied, nothing to clean up */
+  if (!enable && stat(g_cache, &st) != 0) return; 
   find_cfg();
   int found = 0;
   for (int i = 0; i < g_found_n; i++) {
@@ -198,8 +188,7 @@ int main(int argc, char **argv) {
   }
 
   if (strcmp(mode, "set") == 0) {
-    /* Only WIFI_QCOM_FIX exists now - on applies every fix at once, off
-       removes the overlay file. */
+    
     run_wifi_fix(conf);
     return 0;
   }

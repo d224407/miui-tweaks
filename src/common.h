@@ -1,8 +1,4 @@
-/* common.h - shared helpers for every MIUI Tweaks C tool.
- * Header-only on purpose: the build compiles each source file in src/ on
- * its own (no linking step), so every tool just #includes this and gets
- * its own copy of these functions.
- */
+
 #ifndef MT_COMMON_H
 #define MT_COMMON_H
 
@@ -22,7 +18,7 @@
 #define MT_LINE_MAX 1024
 #define MT_LOGFILE  "/storage/emulated/0/Android/miui_tweaks.log"
 
-/* ---- logging: same format/file as the old engine.sh log() ---- */
+
 static void mt_log(int level, const char *fmt, ...) {
   FILE *f = fopen(MT_LOGFILE, "a");
   if (!f) return;
@@ -41,9 +37,7 @@ static void mt_log(int level, const char *fmt, ...) {
   fclose(f);
 }
 
-/* ---- config: read a single KEY=VALUE from a tweaks.conf-style file ----
- * Re-reads the file each call - these tools run a handful of times per
- * boot/toggle, not in a hot loop, so this stays simple on purpose. */
+
 static int mt_conf_get(const char *path, const char *key, char *out, size_t outlen) {
   FILE *f = fopen(path, "r");
   if (!f) return 0;
@@ -59,7 +53,7 @@ static int mt_conf_get(const char *path, const char *key, char *out, size_t outl
       if (n >= outlen) n = outlen - 1;
       memcpy(out, p, n);
       out[n] = '\0';
-      found = 1; /* keep scanning - last definition wins, same as `. file` in sh */
+      found = 1; 
     }
   }
   fclose(f);
@@ -72,10 +66,7 @@ static int mt_is_on(const char *path, const char *key) {
   return v[0] == '1' && v[1] == '\0';
 }
 
-/* ---- run an external binary without going through a shell ----
- * argv must be NULL-terminated. Returns the child's exit code, or -1 if it
- * could not even be started. Silences the child's stdout/stderr unless
- * silent==0. */
+
 static int mt_run(char *const argv[], int silent) {
   pid_t pid = fork();
   if (pid < 0) return -1;
@@ -85,7 +76,7 @@ static int mt_run(char *const argv[], int silent) {
       if (devnull >= 0) { dup2(devnull, 1); dup2(devnull, 2); close(devnull); }
     }
     execv(argv[0], argv);
-    _exit(127); /* execv only returns on failure */
+    _exit(127); 
   }
   int status = 0;
   if (waitpid(pid, &status, 0) < 0) return -1;
@@ -93,9 +84,7 @@ static int mt_run(char *const argv[], int silent) {
   return -1;
 }
 
-/* Looks up a binary across the common Magisk/KernelSU/APatch bin dirs, plus
- * PATH, and returns the first hit (or argv0 unchanged as a last resort so
- * execv's own ENOENT error still gets logged). */
+
 static const char *mt_which(const char *name, char *buf, size_t buflen) {
   const char *dirs[] = {
     "/data/adb/ksu/bin", "/data/adb/ap/bin", "/data/adb/magisk",
@@ -105,13 +94,11 @@ static const char *mt_which(const char *name, char *buf, size_t buflen) {
     snprintf(buf, buflen, "%s/%s", dirs[i], name);
     if (access(buf, X_OK) == 0) return buf;
   }
-  snprintf(buf, buflen, "%s", name); /* fall back to PATH lookup via execvp semantics below */
+  snprintf(buf, buflen, "%s", name); 
   return buf;
 }
 
-/* resetprop -n NAME VALUE, with the same ksu/ap/setprop fallback the old
- * setup_resetprop() in engine.sh had. Tracks "tag name" in track_path so
- * revert_props_tag() can delete only the props this one tweak set. */
+
 static int mt_set_prop(const char *track_path, const char *tag, const char *name, const char *value) {
   char bin[256];
   const char *p = mt_which("resetprop", bin, sizeof(bin));
@@ -124,7 +111,7 @@ static int mt_set_prop(const char *track_path, const char *tag, const char *name
   argv[n] = NULL;
   int rc = mt_run(argv, 1);
   if (rc != 0) {
-    /* fall back to plain setprop (no -n) if resetprop isn't on this ROM */
+    
     char *argv2[] = { (char *)"/system/bin/setprop", (char *)name, (char *)value, NULL };
     rc = mt_run(argv2, 1);
   }
@@ -147,8 +134,7 @@ static void mt_delete_prop(const char *name) {
   }
 }
 
-/* Deletes every prop recorded under `tag` in track_path and rewrites the
- * file without those lines. */
+
 static void mt_revert_props_tag(const char *track_path, const char *tag) {
   FILE *f = fopen(track_path, "r");
   if (!f) return;
@@ -171,4 +157,4 @@ static void mt_revert_props_tag(const char *track_path, const char *tag) {
   if (tmp) { fclose(tmp); rename(tmp_path, track_path); }
 }
 
-#endif /* MT_COMMON_H */
+#endif 
