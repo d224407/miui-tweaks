@@ -31,6 +31,22 @@ ui_print "- MIUI Tweaks installed"
 ui_print "- A safe default set of tweaks is enabled on first install"
 ui_print "- Open the module's WebUI to review or change each tweak"
 
+ui_print "- Selecting resetprop-rs for this device's ABI..."
+RP_ABI="$(getprop ro.product.cpu.abi)"
+case "$RP_ABI" in
+  arm64-v8a|arm64) RP_ABI="arm64-v8a" ;;
+  armeabi-v7a|armeabi) RP_ABI="armeabi-v7a" ;;
+  x86_64*) RP_ABI="x86_64" ;;
+  x86|i686|i586|i486|i386) RP_ABI="x86" ;;
+esac
+if [ -f "$MODPATH/system/bin/resetprop-$RP_ABI" ]; then
+  mv -f "$MODPATH/system/bin/resetprop-$RP_ABI" "$MODPATH/system/bin/resetprop-rs"
+  ui_print "  OK ($RP_ABI)"
+else
+  ui_print "  WARNING: no resetprop-rs build for ABI $RP_ABI, property tweaks will not run"
+fi
+rm -f "$MODPATH"/system/bin/resetprop-arm64-v8a "$MODPATH"/system/bin/resetprop-armeabi-v7a "$MODPATH"/system/bin/resetprop-x86_64 "$MODPATH"/system/bin/resetprop-x86
+
 ui_print "- Extracting tweak-tool binaries for this device's ABI..."
 ARCH_SUFFIX=""
 case "$(getprop ro.product.cpu.abi)" in
@@ -41,7 +57,7 @@ case "$(getprop ro.product.cpu.abi)" in
 esac
 if [ -n "$ARCH_SUFFIX" ]; then
   MISSING=0
-  for t in miui shared gms wifi sysbin legacy doze; do
+  for t in miui shared gms wifi sysbin legacy doze sleepboot; do
     src="$MODPATH/system/bin/${t}_${ARCH_SUFFIX}"
     if [ -f "$src" ]; then
       mv -f "$src" "$MODPATH/system/bin/${t}"

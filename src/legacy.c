@@ -39,8 +39,9 @@ static const char *PROPS[][2] = {
 
 static void apply(const char *track) {
   int n = 0;
-  for (int i = 0; PROPS[i][0]; i++) { mt_set_prop(track, "LEGACY_MODE", PROPS[i][0], PROPS[i][1]); n++; }
-  mt_log(1, "legacy_mode: applied (%d properties)", n);
+  while (PROPS[n][0]) n++;
+  int failed = mt_set_props(track, "LEGACY_MODE", PROPS);
+  mt_log(1, "legacy_mode: applied (%d properties, %d failed)", n, failed);
 }
 
 int main(int argc, char **argv) {

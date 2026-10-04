@@ -11,28 +11,20 @@ wait_until_login() {
 
 wait_until_login
 sleep 30
+rm -f "$MODDIR/config/.pkg_hash"
 apply_late
 
-PKG_HASH_FILE="$MODDIR/config/.pkg_hash"
-PKG_POLL_INTERVAL=20
-
-pkg_state_hash() {
-  { pm list packages -e; pm list packages -d; } 2>/dev/null | md5sum | awk '{print $1}'
-}
-
-pkg_watch_loop() {
-  local prev="" cur=""
-  [ -f "$PKG_HASH_FILE" ] && prev="$(cat "$PKG_HASH_FILE" 2>/dev/null)"
+# The only background process: re-apply once every 24h, no polling.
+# sleepboot counts suspended time too (plain `sleep` stops while the phone
+# sleeps, which can stretch 24h into days); if it is missing or fails, fall
+# back to a plain sleep so this can never turn into a busy loop.
+daily_apply() {
+  local sb="$(bin_path sleepboot)"
   while true; do
-    sleep "$PKG_POLL_INTERVAL"
-    cur="$(pkg_state_hash)"
-    if [ -n "$cur" ] && [ "$cur" != "$prev" ]; then
-      prev="$cur"
-      echo "$cur" > "$PKG_HASH_FILE"
-      log 1 "pkg_watch: package state changed, re-applying"
-      apply_late
-    fi
+    if [ -n "$sb" ]; then "$sb" 86400 || sleep 86400; else sleep 86400; fi
+    log 1 "daily_apply: 24h passed, re-applying"
+    apply_late
   done
 }
 
-pkg_watch_loop &
+daily_apply &

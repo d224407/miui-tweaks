@@ -95,8 +95,12 @@ static const char *DALVIK_PROPS[][2] = {
   {"persist.device_config.runtime_native.usap_pool_enabled","true"}, {NULL,NULL}
 };
 
+static const char *CORE_PROPS[][2] = {
+  {"persist.sys.miui.sf_cores","6"},{"persist.sys.miui_animator_sched.bigcores","6-7"},{NULL,NULL}
+};
+
 static void apply_prop_table(const char *track, const char *tag, const char *const table[][2]) {
-  for (int i = 0; table[i][0]; i++) mt_set_prop(track, tag, table[i][0], table[i][1]);
+  mt_set_props(track, tag, table);
 }
 
 static void cmd2(const char *a, const char *b) {
@@ -146,8 +150,7 @@ int main(int argc, char **argv) {
     if (mt_is_on(conf, "MIUI_SERVICES")) pm_toggle_all(MIUI_SERVICE_LIST, 1);
     if (mt_is_on(conf, "MISC_KILL_SERVICES")) misc_kill();
     if (mt_is_on(conf, "CPU_CORE_HARDCODE")) {
-      mt_set_prop(track, "CPU_CORE_HARDCODE", "persist.sys.miui.sf_cores", "6");
-      mt_set_prop(track, "CPU_CORE_HARDCODE", "persist.sys.miui_animator_sched.bigcores", "6-7");
+      mt_set_props(track, "CPU_CORE_HARDCODE", CORE_PROPS);
       mt_log(1, "cpu_core_hardcode: applied (risk: wrong on non-8-core chips)");
     }
     if (mt_is_on(conf, "FIXED_PERF_MODE")) { cmd3("power", "set-fixed-performance-mode-enabled", "true"); mt_log(1, "fixed_perf_mode: applied (risk: battery/heat)"); }
@@ -176,7 +179,7 @@ int main(int argc, char **argv) {
     else if (strcmp(key, "SYS_LOG_PROPS") == 0) { if (on) apply_prop_table(track, "SYS_LOG_PROPS", LOG_PROPS); else mt_revert_props_tag(track, "SYS_LOG_PROPS"); }
     else if (strcmp(key, "SYS_DALVIK_PROPS") == 0) { if (on) apply_prop_table(track, "SYS_DALVIK_PROPS", DALVIK_PROPS); else mt_revert_props_tag(track, "SYS_DALVIK_PROPS"); }
     else if (strcmp(key, "CPU_CORE_HARDCODE") == 0) {
-      if (on) { mt_set_prop(track, "CPU_CORE_HARDCODE", "persist.sys.miui.sf_cores", "6"); mt_set_prop(track, "CPU_CORE_HARDCODE", "persist.sys.miui_animator_sched.bigcores", "6-7"); }
+      if (on) mt_set_props(track, "CPU_CORE_HARDCODE", CORE_PROPS);
       else mt_revert_props_tag(track, "CPU_CORE_HARDCODE");
     }
     else if (strcmp(key, "FIXED_PERF_MODE") == 0) cmd3("power", "set-fixed-performance-mode-enabled", on ? "true" : "false");

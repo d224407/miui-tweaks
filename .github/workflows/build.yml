@@ -44,6 +44,18 @@ jobs:
           echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "new_version_code=${NEW_VERSION_CODE}" >> $GITHUB_OUTPUT
 
+      # update.json follows the bump: the release link is built from the new
+      # tag + zip name every run, so it never points at an old release.
+      - name: Update update.json
+        run: |
+          TAG="v${{ steps.bump_version.outputs.new_version }}"
+          CODE="${{ steps.bump_version.outputs.new_version_code }}"
+          MODID="$(grep '^id=' module.prop | cut -d= -f2)"
+          ZIP_NAME="${MODID}-${TAG}.zip"
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${ZIP_NAME}"
+          printf '{\n  "version": "%s",\n  "versionCode": %s,\n  "zipUrl": "%s"\n}\n' "$TAG" "$CODE" "$URL" > update.json
+          cat update.json
+
       # Compiles every source file under src/ - adding a new .c file there
       # is enough to ship a new tool, nothing here needs editing for that.
       - name: Compile every src/*.c for every ABI
@@ -84,14 +96,14 @@ jobs:
 
           # Everything in the repo goes into the module except the
           # repo-only src/ and .github/ dirs.
-          zip -r9 "$ZIP_NAME" . -x "src/*" ".github/*" ".git/*" ".gitattribute"
+          zip -r9 "$ZIP_NAME" . -x "src/*" ".github/*" ".git/*" ".gitattribute" "update.json"
 
       - name: Commit version bump
         continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add module.prop
+          git add module.prop update.json
           git commit -m "chore: bump version to v${{ steps.bump_version.outputs.new_version }} [skip ci]" || echo "No changes to commit"
           git push origin HEAD:${{ github.event.repository.default_branch }}
 
@@ -103,7 +115,9 @@ jobs:
           name: v${{ steps.bump_version.outputs.new_version }}
           draft: false
           prerelease: false
-          files: ${{ steps.package.outputs.zip_name }}
+          files: |
+            ${{ steps.package.outputs.zip_name }}
+            update.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -87,56 +87,115 @@ static int mt_run(char *const argv[], int silent) {
 }
 
 
-static const char *mt_which(const char *name, char *buf, size_t buflen) {
-  const char *dirs[] = {
-    "/data/adb/ksu/bin", "/data/adb/ap/bin", "/data/adb/magisk",
-    "/system/bin", "/system/xbin", NULL
-  };
-  for (int i = 0; dirs[i]; i++) {
-    snprintf(buf, buflen, "%s/%s", dirs[i], name);
-    if (access(buf, X_OK) == 0) return buf;
+/* resetprop-rs (v0.6.x) lives next to the tool binaries in system/bin and is
+ * always called by full path - a bare "resetprop" would resolve to Magisk's or
+ * KernelSU's own build, which has none of the v6 flags used below.
+ * MT_RESETPROP overrides the path (testing / manual use). */
+static const char *mt_resetprop(char *buf, size_t buflen) {
+  const char *env = getenv("MT_RESETPROP");
+  if (env && *env) { snprintf(buf, buflen, "%s", env); return buf; }
+  char self[512];
+  ssize_t n = readlink("/proc/self/exe", self, sizeof(self) - 1);
+  if (n > 0) {
+    self[n] = '\0';
+    char *sl = strrchr(self, '/');
+    if (sl) {
+      *sl = '\0';
+      snprintf(buf, buflen, "%s/resetprop-rs", self);
+      if (access(buf, X_OK) == 0) return buf;
+    }
   }
-  snprintf(buf, buflen, "%s", name); 
-  return buf;
+  snprintf(buf, buflen, "/data/adb/modules/miui_tweaks/system/bin/resetprop-rs");
+  if (access(buf, X_OK) == 0) return buf;
+  return NULL;
 }
 
+static int mt_track_has(const char *track_path, const char *tag, const char *name) {
+  FILE *f = fopen(track_path, "r");
+  if (!f) return 0;
+  char want[MT_LINE_MAX], line[MT_LINE_MAX];
+  snprintf(want, sizeof(want), "%s %s", tag, name);
+  int found = 0;
+  while (fgets(line, sizeof(line), f)) {
+    line[strcspn(line, "\r\n")] = '\0';
+    if (strcmp(line, want) == 0) { found = 1; break; }
+  }
+  fclose(f);
+  return found;
+}
 
+/* Records "tag name" so revert can delete exactly what this tweak set.
+ * Skips lines already present so the daily re-apply doesn't grow the file. */
+static void mt_track_add(const char *track_path, const char *tag, const char *name) {
+  if (mt_track_has(track_path, tag, name)) return;
+  FILE *tf = fopen(track_path, "a");
+  if (tf) { fprintf(tf, "%s %s\n", tag, name); fclose(tf); }
+}
+
+/* resetprop-rs -n NAME VALUE  (-n = write without serial bump / futex wake) */
 static int mt_set_prop(const char *track_path, const char *tag, const char *name, const char *value) {
-  char bin[256];
-  const char *p = mt_which("resetprop", bin, sizeof(bin));
-  char *argv[6];
-  int n = 0;
-  argv[n++] = (char *)p;
-  if (access(p, X_OK) == 0 && strstr(p, "resetprop")) argv[n++] = (char *)"-n";
-  argv[n++] = (char *)name;
-  argv[n++] = (char *)value;
-  argv[n] = NULL;
+  char rp[512];
+  if (!mt_resetprop(rp, sizeof(rp))) {
+    mt_log(3, "set_prop: resetprop-rs not found, cannot set %s (tag %s)", name, tag);
+    return -1;
+  }
+  char *argv[] = { rp, (char *)"-n", (char *)name, (char *)value, NULL };
   int rc = mt_run(argv, 1);
-  if (rc != 0) {
-    
-    char *argv2[] = { (char *)"/system/bin/setprop", (char *)name, (char *)value, NULL };
-    rc = mt_run(argv2, 1);
-  }
-  if (rc == 0) {
-    FILE *tf = fopen(track_path, "a");
-    if (tf) { fprintf(tf, "%s %s\n", tag, name); fclose(tf); }
-  } else {
-    mt_log(3, "set_prop: failed to set %s=%s (tag %s)", name, value, tag);
-  }
+  if (rc == 0) mt_track_add(track_path, tag, name);
+  else mt_log(3, "set_prop: resetprop-rs -n %s %s failed (rc=%d, tag %s)", name, value, rc, tag);
   return rc;
 }
 
-static void mt_delete_prop(const char *name) {
-  char bin[256];
-  const char *p = mt_which("resetprop", bin, sizeof(bin));
-  char *argv[] = { (char *)p, (char *)"--delete", (char *)name, NULL };
-  if (mt_run(argv, 1) != 0) {
-    char *argv2[] = { (char *)p, (char *)"-d", (char *)name, NULL };
-    mt_run(argv2, 1);
+/* Sets a whole { {name, value}, ..., {NULL, NULL} } table with ONE resetprop-rs
+ * run (-f FILE, one name=value per line) instead of one fork+exec per prop.
+ * If the batch run fails it falls back to setting each prop on its own so one
+ * bad entry cannot cost the rest, and every failure still gets logged.
+ * Returns how many props failed. */
+static int mt_set_props(const char *track_path, const char *tag, const char *const table[][2]) {
+  int count = 0;
+  while (table[count][0]) count++;
+  if (!count) return 0;
+
+  char rp[512];
+  if (!mt_resetprop(rp, sizeof(rp))) {
+    mt_log(3, "set_props: resetprop-rs not found, %d props of %s not applied", count, tag);
+    return count;
   }
+
+  char batch[600];
+  snprintf(batch, sizeof(batch), "%s.batch", track_path);
+  FILE *bf = fopen(batch, "w");
+  if (bf) {
+    for (int i = 0; i < count; i++) fprintf(bf, "%s=%s\n", table[i][0], table[i][1]);
+    fclose(bf);
+    char *argv[] = { rp, (char *)"-n", (char *)"-f", batch, NULL };
+    int rc = mt_run(argv, 1);
+    remove(batch);
+    if (rc == 0) {
+      for (int i = 0; i < count; i++) mt_track_add(track_path, tag, table[i][0]);
+      return 0;
+    }
+    mt_log(2, "set_props: batch run for %s failed (rc=%d), retrying %d props one by one", tag, rc, count);
+  } else {
+    mt_log(2, "set_props: cannot write %s, setting %d props of %s one by one", batch, count, tag);
+  }
+
+  int failed = 0;
+  for (int i = 0; i < count; i++) if (mt_set_prop(track_path, tag, table[i][0], table[i][1]) != 0) failed++;
+  return failed;
 }
 
+/* resetprop-rs --delete-if-exist NAME  (exit 0 when the prop is already gone) */
+static void mt_delete_prop(const char *name) {
+  char rp[512];
+  if (!mt_resetprop(rp, sizeof(rp))) { mt_log(3, "delete_prop: resetprop-rs not found, %s not deleted", name); return; }
+  char *argv[] = { rp, (char *)"--delete-if-exist", (char *)name, NULL };
+  int rc = mt_run(argv, 1);
+  if (rc != 0) mt_log(3, "delete_prop: resetprop-rs --delete-if-exist %s failed (rc=%d)", name, rc);
+}
 
+/* Deletes every prop recorded under `tag` and rewrites the track file
+ * without those lines. */
 static void mt_revert_props_tag(const char *track_path, const char *tag) {
   FILE *f = fopen(track_path, "r");
   if (!f) return;

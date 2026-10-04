@@ -24,13 +24,7 @@ is_on() {
   [ "$1" = "1" ]
 }
 
-resetprop_bin() {
-  if command -v resetprop > /dev/null 2>&1; then echo "resetprop"; return; fi
-  for p in /data/adb/ksu/bin/resetprop /data/adb/ap/bin/resetprop; do
-    [ -f "$p" ] && { echo "$p"; return; }
-  done
-  echo "setprop"
-}
+RESETPROP="$MODDIR/system/bin/resetprop-rs"
 
 run_tool() {
   local tool="$1"; shift
@@ -184,11 +178,14 @@ restore_all() {
   run_tool miui set MIUI_SERVICES 0
   run_tool doze "$MODDIR" set GMS_DOZE 0
   if [ -f "$PROP_TRACK" ]; then
-    local rp="$(resetprop_bin)"
-    sort -u "$PROP_TRACK" | while IFS=' ' read -r _ name; do
-      [ -n "$name" ] || continue
-      "$rp" --delete "$name" 2>/dev/null || "$rp" -d "$name" 2>/dev/null
-    done
+    if [ -x "$RESETPROP" ]; then
+      sort -u "$PROP_TRACK" | while IFS=' ' read -r _ name; do
+        [ -n "$name" ] || continue
+        "$RESETPROP" --delete-if-exist "$name" 2>/dev/null || log 3 "restore_all: failed to delete $name"
+      done
+    else
+      log 3 "restore_all: $RESETPROP missing, tracked properties not deleted (reboot clears non-persist ones)"
+    fi
     rm -f "$PROP_TRACK"
   fi
   log 1 "restore_all: services re-enabled, tracked properties deleted (persist.* still need a reboot to fully clear since init reapplies them)"

@@ -1,10 +1,17 @@
 
 #include "common.h"
 
+static const char *LMK[][2] = {
+  {"ro.lmk.debug","false"},{"ro.lmk.log_stats","false"},{NULL,NULL}
+};
+static const char *BLUR[][2] = {
+  {"disableBlurs","true"},{"enable_blurs_on_windows","0"},{"ro.launcher.blur.appLaunch","0"},
+  {"ro.sf.blurs_are_expensive","0"},{"ro.surface_flinger.supports_background_blur","0"},{NULL,NULL}
+};
+
 static void apply_lmk(const char *track, int on) {
   if (on) {
-    mt_set_prop(track, "LMK_PROPS", "ro.lmk.debug", "false");
-    mt_set_prop(track, "LMK_PROPS", "ro.lmk.log_stats", "false");
+    mt_set_props(track, "LMK_PROPS", LMK);
     mt_log(1, "lmk_props: applied");
   } else {
     mt_revert_props_tag(track, "LMK_PROPS");
@@ -22,11 +29,7 @@ static void apply_tombstone(const char *track, int on) {
 
 static void apply_blur(const char *track, int on) {
   if (on) {
-    mt_set_prop(track, "BLUR_DISABLE", "disableBlurs", "true");
-    mt_set_prop(track, "BLUR_DISABLE", "enable_blurs_on_windows", "0");
-    mt_set_prop(track, "BLUR_DISABLE", "ro.launcher.blur.appLaunch", "0");
-    mt_set_prop(track, "BLUR_DISABLE", "ro.sf.blurs_are_expensive", "0");
-    mt_set_prop(track, "BLUR_DISABLE", "ro.surface_flinger.supports_background_blur", "0");
+    mt_set_props(track, "BLUR_DISABLE", BLUR);
     mt_log(1, "blur_disable: applied");
   } else {
     mt_revert_props_tag(track, "BLUR_DISABLE");
