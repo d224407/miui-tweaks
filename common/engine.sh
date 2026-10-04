@@ -146,6 +146,8 @@ run_single() {
       if is_on "$val"; then tweak_cpu_pin; else revert_cpu_pin; fi ;;
     WIFI_QCOM_FIX)
       run_tool wifi "$MODDIR" set "$key" "$val" ;;
+    GMS_DOZE)
+      run_tool doze "$MODDIR" set "$key" "$val" ;;
     SYSBIN_MASTER|STUB_LOG|STUB_TRACED|STUB_DEBUG|STUB_BUGREPORT|STUB_NETDIAG)
       run_tool sysbin "$MODDIR" set "$key" "$val" ;;
     *) log 2 "run_single: unknown key $key" ;;
@@ -161,6 +163,7 @@ apply_early() {
   run_tool legacy early
   run_tool wifi "$MODDIR" early
   run_tool sysbin "$MODDIR" early
+  run_tool doze "$MODDIR" early
 }
 
 apply_late() {
@@ -168,6 +171,7 @@ apply_late() {
   log 1 "[START] apply_late"
   run_tool miui late
   run_tool gms "$GMSLIST" late
+  run_tool doze "$MODDIR" late
   tweak_cpu_pin
   log 1 "[END] apply_late"
 }
@@ -178,6 +182,7 @@ restore_all() {
   run_tool gms "$GMSLIST" set DISABLE_DROIDGUARD 0
   run_tool gms "$GMSLIST" set GMS_LOG_DISABLE 0
   run_tool miui set MIUI_SERVICES 0
+  run_tool doze "$MODDIR" set GMS_DOZE 0
   if [ -f "$PROP_TRACK" ]; then
     local rp="$(resetprop_bin)"
     sort -u "$PROP_TRACK" | while IFS=' ' read -r _ name; do

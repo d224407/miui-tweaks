@@ -116,6 +116,12 @@ static void cmd5(const char *a, const char *b, const char *c, const char *d, con
   mt_run(argv, 1);
 }
 
+static void packages_dexopt_reset(void) {
+  char *a[] = { (char *)"/system/bin/pm", (char *)"compile", (char *)"--reset", (char *)"-a", NULL };
+  if (mt_run(a, 1) != 0) { mt_log(3, "packages_dexopt: pm compile --reset -a failed"); return; }
+  mt_log(1, "packages_dexopt: reverted (pm compile --reset -a)");
+}
+
 static void packages_dexopt(void) {
   char *a1[] = { (char *)"/system/bin/pm", (char *)"compile", (char *)"-m", (char *)"speed-profile", (char *)"-a", NULL }; mt_run(a1, 1);
   char *a2[] = { (char *)"/system/bin/pm", (char *)"compile", (char *)"-m", (char *)"speed-profile", (char *)"--secondary-dex", (char *)"-a", NULL }; mt_run(a2, 1);
@@ -175,7 +181,7 @@ int main(int argc, char **argv) {
     }
     else if (strcmp(key, "FIXED_PERF_MODE") == 0) cmd3("power", "set-fixed-performance-mode-enabled", on ? "true" : "false");
     else if (strcmp(key, "THERMAL_OVERRIDE") == 0) { if (on) cmd3("thermalservice", "override-status", "0"); else cmd2("thermalservice", "reset"); }
-    else if (strcmp(key, "PACKAGES_DEXOPT") == 0) { if (on) packages_dexopt();  }
+    else if (strcmp(key, "PACKAGES_DEXOPT") == 0) { if (on) packages_dexopt(); else packages_dexopt_reset(); }
     else if (strcmp(key, "CMD_MISC") == 0) {
       if (on) {
         { char *a[] = {(char*)"/system/bin/cmd",(char*)"settings",(char*)"put",(char*)"system",(char*)"anr_debugging_mechanism",(char*)"0",NULL}; mt_run(a,1); }

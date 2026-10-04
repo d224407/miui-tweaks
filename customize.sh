@@ -41,7 +41,7 @@ case "$(getprop ro.product.cpu.abi)" in
 esac
 if [ -n "$ARCH_SUFFIX" ]; then
   MISSING=0
-  for t in miui shared gms wifi sysbin legacy; do
+  for t in miui shared gms wifi sysbin legacy doze; do
     src="$MODPATH/system/bin/${t}_${ARCH_SUFFIX}"
     if [ -f "$src" ]; then
       mv -f "$src" "$MODPATH/system/bin/${t}"

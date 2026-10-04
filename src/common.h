@@ -16,7 +16,9 @@
 #include <fcntl.h>
 
 #define MT_LINE_MAX 1024
+#ifndef MT_LOGFILE
 #define MT_LOGFILE  "/storage/emulated/0/Android/miui_tweaks.log"
+#endif
 
 
 static void mt_log(int level, const char *fmt, ...) {

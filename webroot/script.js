@@ -10,7 +10,7 @@ const DEFAULTS = {
   CPU_PIN: "0", CPU_CORE_HARDCODE: "0", FIXED_PERF_MODE: "0", THERMAL_OVERRIDE: "0",
   PACKAGES_DEXOPT: "0", CMD_MISC: "1",
   LMK_PROPS: "1", TOMBSTONE_DISABLE: "0", BLUR_DISABLE: "0",
-  GMS_MASTER: "1", GMS_LOG_DISABLE: "1", DISABLE_DROIDGUARD: "0",
+  GMS_MASTER: "1", GMS_LOG_DISABLE: "1", DISABLE_DROIDGUARD: "0", GMS_DOZE: "0",
   DISABLE_ADS: "1", DISABLE_TRACKING: "1", DISABLE_ANALYTICS: "1", DISABLE_REPORTING: "1",
   DISABLE_BACKGROUND: "0", DISABLE_UPDATE: "0", DISABLE_LOCATION: "0", DISABLE_GEOFENCE: "0",
   DISABLE_NEARBY: "0", DISABLE_CAST: "0", DISABLE_DISCOVERY: "0", DISABLE_SYNC: "0",
@@ -20,6 +20,21 @@ const DEFAULTS = {
   SYSBIN_MASTER: "0", STUB_LOG: "0", STUB_TRACED: "0", STUB_DEBUG: "0", STUB_BUGREPORT: "0", STUB_NETDIAG: "0",
   LEGACY_MODE: "0"
 };
+
+// Tweaks that cannot be reverted instantly (or only take effect on the next boot)
+// get "Need reboot." appended to their description.
+const NEED_REBOOT = new Set([
+  "MISC_KILL_SERVICES", "SYS_LOG_PROPS", "SYS_DALVIK_PROPS", "CPU_PIN", "CPU_CORE_HARDCODE", "CMD_MISC",
+  "LMK_PROPS", "TOMBSTONE_DISABLE", "BLUR_DISABLE", "LEGACY_MODE", "GMS_DOZE", "WIFI_QCOM_FIX",
+  "SYSBIN_MASTER", "STUB_LOG", "STUB_TRACED", "STUB_DEBUG", "STUB_BUGREPORT", "STUB_NETDIAG",
+]);
+
+function withReboot(key, desc) {
+  if (!NEED_REBOOT.has(key)) return desc;
+  const d = (desc || "").trim();
+  if (!d) return "Need reboot.";
+  return (/[.!?]$/.test(d) ? d : d + ".") + " Need reboot.";
+}
 
 const SECTIONS = [
   { title: "MIUI - Background services", items: [
@@ -37,7 +52,7 @@ const SECTIONS = [
     ["THERMAL_OVERRIDE", "Disable overheat throttling", "Removes the system's thermal protection entirely - highest risk tweak here", true],
   ]},
   { title: "MIUI - Miscellaneous", items: [
-    ["PACKAGES_DEXOPT", "Recompile every installed app", "pm compile speed-profile -a, one-time CPU/battery/storage cost"],
+    ["PACKAGES_DEXOPT", "Recompile every installed app", "pm compile speed-profile -a, one-time CPU/battery/storage cost. Turning it off resets every app to its default compile state (pm compile --reset)"],
     ["CMD_MISC", "Minor cmd tweaks", "ANR debug overhead, netstats, fstrim interval, dropbox log rate"],
   ]},
   { title: "Shared (MIUI + GMS)", items: [
@@ -71,13 +86,14 @@ const SECTIONS = [
     standalone: [
       ["GMS_LOG_DISABLE", "Disable GMS logging/telemetry", "clearcut, phenotype, analytics, usage-stats Settings.Global flags"],
       ["DISABLE_DROIDGUARD", "Disable DroidGuard", "Breaks SafetyNet/Play Integrity - banking apps, Google Wallet, Play Store integrity checks will fail", true],
+      ["GMS_DOZE", "Put Google Play services under Doze", "Removes GMS from the battery-optimization allowlist (sysconfig allow-in-power-save + deviceidle whitelist) so it can Doze. Keeps its Data Saver exemption, but normal-priority push messages may arrive late", true],
     ],
   },
   { title: "Wi-Fi (Qualcomm)", items: [
-    ["WIFI_QCOM_FIX", "Fix Wi-Fi wakelock drain", "Patches WCNSS_qcom_cfg.ini via mount overlay (ARP/NS offload, power-save, roaming, RTS, scan timing, session limit, wakelock timeout - applied together). Needs reboot."],
+    ["WIFI_QCOM_FIX", "Fix Wi-Fi wakelock drain", "Patches WCNSS_qcom_cfg.ini via mount overlay (ARP/NS offload, power-save, roaming, RTS, scan timing, session limit, wakelock timeout - applied together)"],
   ]},
   { title: "System binaries (mount)", group: true, masterKey: "SYSBIN_MASTER",
-    masterLabel: "System log/debug binary stubs", masterDesc: "Replaces /system/bin tools with no-ops via mount overlay, needs reboot - tap to choose which",
+    masterLabel: "System log/debug binary stubs", masterDesc: "Replaces /system/bin tools with no-ops via mount overlay - tap to choose which",
     applyFns: ["tweak_sysbin_stubs"],
     children: [
       ["STUB_LOG", "Logging (logd, logcat...)", "Disables the system log buffer entirely - logcat, ADB logging, and this module's own log all stop working", true],
@@ -121,10 +137,10 @@ function allItems() {
   const out = [];
   SECTIONS.forEach((s) => {
     if (s.group) {
-      s.children.forEach((it) => out.push({ section: s, key: it[0], label: it[1], desc: it[2], risky: !!it[3], type: "switch" }));
-      (s.standalone || []).forEach((it) => out.push({ section: s, key: it[0], label: it[1], desc: it[2], risky: !!it[3], type: it[4] || "switch" }));
+      s.children.forEach((it) => out.push({ section: s, key: it[0], label: it[1], desc: withReboot(it[0], it[2]), risky: !!it[3], type: "switch" }));
+      (s.standalone || []).forEach((it) => out.push({ section: s, key: it[0], label: it[1], desc: withReboot(it[0], it[2]), risky: !!it[3], type: it[4] || "switch" }));
     } else {
-      s.items.forEach((it) => out.push({ section: s, key: it[0], label: it[1], desc: it[2], risky: !!it[3], type: it[4] || "switch" }));
+      s.items.forEach((it) => out.push({ section: s, key: it[0], label: it[1], desc: withReboot(it[0], it[2]), risky: !!it[3], type: it[4] || "switch" }));
     }
   });
   return out;
@@ -173,7 +189,7 @@ function render() {
       html.push(
         '<div class="list-container"><div class="tweak-row master-row" data-group="' + s.title + '">' +
           '<div class="tweak-info"><span class="tweak-name">' + s.masterLabel + "</span>" +
-          '<div class="tweak-desc">' + s.masterDesc + "</div></div>" +
+          '<div class="tweak-desc">' + withReboot(s.masterKey, s.masterDesc) + "</div></div>" +
           '<div class="li-toggle-action">' +
             '<svg class="li-config-chevron" viewBox="0 0 8 14" width="8" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 2L6.5 7L1.5 12"/></svg>' +
             '<div class="li-config-divider" aria-hidden="true"></div>' +
@@ -237,7 +253,7 @@ async function setKey(key, val) {
 
 function renderSubpageChildren(section) {
   const content = document.getElementById("subpageContent");
-  const rows = section.children.map((c) => rowHtml({ key: c[0], label: c[1], desc: c[2], risky: !!c[3], type: "switch" })).join("");
+  const rows = section.children.map((c) => rowHtml({ key: c[0], label: c[1], desc: withReboot(c[0], c[2]), risky: !!c[3], type: "switch" })).join("");
   content.innerHTML =
     '<div class="subpage-bulk-row"><button class="btn" id="bulkNone">Select none</button><button class="btn primary" id="bulkAll">Select all</button></div>' +
     '<div class="list-container">' + rows + "</div>";
