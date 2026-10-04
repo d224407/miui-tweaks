@@ -1,6 +1,6 @@
 id=miui_tweaks
 name=miui tweaks
-version=v5
-versionCode=5
+version=v6
+versionCode=6
 author=min
 description=MIUI performance tweaks, Google Services optimizer and Qualcomm Wi-Fi wakelock fix, single config. Every tweak is off/safe by default
