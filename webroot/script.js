@@ -18,6 +18,7 @@ const DEFAULTS = {
   DISABLE_WEAR: "0", DISABLE_FITNESS: "0",
   WIFI_QCOM_FIX: "0",
   SYSBIN_MASTER: "0", STUB_LOG: "0", STUB_TRACED: "0", STUB_DEBUG: "0", STUB_BUGREPORT: "0", STUB_NETDIAG: "0",
+  SENSORS_OFF: "0",
   LEGACY_MODE: "0"
 };
 
@@ -103,6 +104,9 @@ const SECTIONS = [
       ["STUB_NETDIAG", "Network diagnostics (tcpdump, traceroute...)", "Command-line tools only, rarely used directly - lowest impact of this group", true],
     ],
   },
+  { title: "Sensors", items: [
+    ["SENSORS_OFF", "Turn off camera, microphone and sensors", "Android's Sensors Off state: apps get no camera, mic or sensor data. Auto-rotate, auto-brightness, proximity (screen stays on during calls), step counter, camera and voice input stop working until this is turned off. Android 10-17 only", true],
+  ]},
   { title: "Legacy (deep tweak set)", items: [
     ["LEGACY_MODE", "GhostGMS Legacy deep tweaks", "~78 extra sysprops (logging, BT codec, GPU composition, sleep mode) - broader and less tested than the tweaks above", true],
   ]},

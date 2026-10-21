@@ -2,7 +2,6 @@
 
 CONF="$MODDIR/config/tweaks.conf"
 LOGFILE="/storage/emulated/0/Android/miui_tweaks.log"
-GMSLIST="$MODDIR/gmslist.txt"
 PROP_TRACK="$MODDIR/config/.applied_props"
 
 . "$MODDIR/common/arch.sh"
@@ -122,7 +121,7 @@ run_single() {
 
   for pair in $GMS_CATEGORY_KEYS; do
     if [ "${pair%%:*}" = "$key" ]; then
-      run_tool gms "$GMSLIST" category "${pair#*:}" "$val"
+      run_tool gms category "${pair#*:}" "$val"
       return 0
     fi
   done
@@ -135,13 +134,15 @@ run_single() {
     LEGACY_MODE)
       run_tool legacy set "$key" "$val" ;;
     GMS_MASTER|GMS_LOG_DISABLE|DISABLE_DROIDGUARD)
-      run_tool gms "$GMSLIST" set "$key" "$val" ;;
+      run_tool gms set "$key" "$val" ;;
     CPU_PIN)
       if is_on "$val"; then tweak_cpu_pin; else revert_cpu_pin; fi ;;
     WIFI_QCOM_FIX)
       run_tool wifi "$MODDIR" set "$key" "$val" ;;
     GMS_DOZE)
       run_tool doze "$MODDIR" set "$key" "$val" ;;
+    SENSORS_OFF)
+      run_tool sensoroff set "$key" "$val" ;;
     SYSBIN_MASTER|STUB_LOG|STUB_TRACED|STUB_DEBUG|STUB_BUGREPORT|STUB_NETDIAG)
       run_tool sysbin "$MODDIR" set "$key" "$val" ;;
     *) log 2 "run_single: unknown key $key" ;;
@@ -164,7 +165,8 @@ apply_late() {
   load_conf
   log 1 "[START] apply_late"
   run_tool miui late
-  run_tool gms "$GMSLIST" late
+  run_tool gms late
+  run_tool sensoroff late
   run_tool doze "$MODDIR" late
   tweak_cpu_pin
   log 1 "[END] apply_late"
@@ -172,11 +174,12 @@ apply_late() {
 
 restore_all() {
   load_conf
-  run_tool gms "$GMSLIST" set GMS_MASTER 0
-  run_tool gms "$GMSLIST" set DISABLE_DROIDGUARD 0
-  run_tool gms "$GMSLIST" set GMS_LOG_DISABLE 0
+  run_tool gms set GMS_MASTER 0
+  run_tool gms set DISABLE_DROIDGUARD 0
+  run_tool gms set GMS_LOG_DISABLE 0
   run_tool miui set MIUI_SERVICES 0
   run_tool doze "$MODDIR" set GMS_DOZE 0
+  is_on "$SENSORS_OFF" && run_tool sensoroff set SENSORS_OFF 0
   if [ -f "$PROP_TRACK" ]; then
     if [ -x "$RESETPROP" ]; then
       sort -u "$PROP_TRACK" | while IFS=' ' read -r _ name; do
