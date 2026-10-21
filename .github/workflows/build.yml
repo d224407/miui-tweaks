@@ -2,11 +2,17 @@ name: Build
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ '**' ]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# main runs queue up one after another so two pushes can't bump to the same
+# version; any other branch just cancels its own older run.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
@@ -14,6 +20,8 @@ jobs:
 
     env:
       CFLAGS: "-Oz -flto -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables -Wl,--gc-sections -s"
+      # Every branch builds. Only main bumps the version and publishes.
+      IS_MAIN: ${{ github.ref == 'refs/heads/main' }}
 
     steps:
       - name: Checkout code
@@ -28,30 +36,40 @@ jobs:
         with:
           ndk-version: r29
 
-      - name: Bump version
-        id: bump_version
+      # main: bump version/versionCode in module.prop and name the zip after
+      # the new version. Other branches: leave module.prop alone and name the
+      # zip <id>-v<current>-<branch>-<sha> so it can't be mistaken for a release.
+      - name: Resolve version
+        id: ver
         run: |
           VERSION_RAW=$(grep "^version=" module.prop | cut -d'=' -f2)
           VERSION=${VERSION_RAW#v}
           VERSION_CODE=$(grep "^versionCode=" module.prop | cut -d'=' -f2)
+          MODID="$(grep '^id=' module.prop | cut -d= -f2)"
 
-          NEW_VERSION=$((VERSION + 1))
-          NEW_VERSION_CODE=$((VERSION_CODE + 1))
+          if [ "$IS_MAIN" = "true" ]; then
+            VERSION=$((VERSION + 1))
+            VERSION_CODE=$((VERSION_CODE + 1))
+            sed -i "s/^version=v.*/version=v${VERSION}/" module.prop
+            sed -i "s/^versionCode=.*/versionCode=${VERSION_CODE}/" module.prop
+            ZIP_NAME="${MODID}-v${VERSION}.zip"
+          else
+            BRANCH="${GITHUB_REF_NAME//[^A-Za-z0-9._-]/-}"
+            ZIP_NAME="${MODID}-v${VERSION}-${BRANCH}-${GITHUB_SHA::7}.zip"
+          fi
 
-          sed -i "s/^version=v.*/version=v${NEW_VERSION}/" module.prop
-          sed -i "s/^versionCode=.*/versionCode=${NEW_VERSION_CODE}/" module.prop
-
-          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-          echo "new_version_code=${NEW_VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "zip_name=${ZIP_NAME}" >> $GITHUB_OUTPUT
 
       # update.json follows the bump: the release link is built from the new
       # tag + zip name every run, so it never points at an old release.
       - name: Update update.json
+        if: env.IS_MAIN == 'true'
         run: |
-          TAG="v${{ steps.bump_version.outputs.new_version }}"
-          CODE="${{ steps.bump_version.outputs.new_version_code }}"
-          MODID="$(grep '^id=' module.prop | cut -d= -f2)"
-          ZIP_NAME="${MODID}-${TAG}.zip"
+          TAG="v${{ steps.ver.outputs.version }}"
+          CODE="${{ steps.ver.outputs.version_code }}"
+          ZIP_NAME="${{ steps.ver.outputs.zip_name }}"
           URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${ZIP_NAME}"
           printf '{\n  "version": "%s",\n  "versionCode": %s,\n  "zipUrl": "%s"\n}\n' "$TAG" "$CODE" "$URL" > update.json
           cat update.json
@@ -87,36 +105,31 @@ jobs:
           chmod 755 system/bin/*
 
       - name: Package module zip
-        id: package
         run: |
-          NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
-          MODID="$(grep '^id=' module.prop | cut -d= -f2)"
-          ZIP_NAME="${MODID}-v${NEW_VERSION}.zip"
-          echo "zip_name=${ZIP_NAME}" >> $GITHUB_OUTPUT
-
           # Everything in the repo goes into the module except the
           # repo-only src/ and .github/ dirs.
-          zip -r9 "$ZIP_NAME" . -x "src/*" ".github/*" ".git/*" ".gitattribute" "update.json"
+          zip -r9 "${{ steps.ver.outputs.zip_name }}" . -x "src/*" ".github/*" ".git/*" ".gitattribute" "update.json"
 
       - name: Commit version bump
+        if: env.IS_MAIN == 'true'
         continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add module.prop update.json
-          git commit -m "chore: bump version to v${{ steps.bump_version.outputs.new_version }} [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:${{ github.event.repository.default_branch }}
+          git commit -m "chore: bump version to v${{ steps.ver.outputs.version }} [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:main
 
       - name: Create Release
-        if: github.ref_name == github.event.repository.default_branch
+        if: env.IS_MAIN == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.bump_version.outputs.new_version }}
-          name: v${{ steps.bump_version.outputs.new_version }}
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: v${{ steps.ver.outputs.version }}
           draft: false
           prerelease: false
           files: |
-            ${{ steps.package.outputs.zip_name }}
+            ${{ steps.ver.outputs.zip_name }}
             update.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -125,4 +138,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: miui-tweaks-build
-          path: ${{ steps.package.outputs.zip_name }}
+          path: ${{ steps.ver.outputs.zip_name }}
